@@ -698,7 +698,7 @@
   /* ============================================================
      时政
      ============================================================ */
-  var nz = { q: '', cat: '全部' };
+  var nz = { q: '', cat: '全部' , limit: 36 };
 
   function renderShizheng() {
     var cats = ['全部'];
@@ -715,10 +715,10 @@
       '<div class="news-tools">' +
         '<input id="newsQ" placeholder="搜索关键词，如：基层、数字、托育" value="' + esc(nz.q) + '">' +
         '<div class="mods">' + cats.map(function (c) {
-          return '<button class="mod-chip' + (c === nz.cat ? ' on' : '') + '" data-act="ncat" data-c="' + esc(c) + '">' + esc(c) + '</button>';
+          return '<button class="mod-chip' + (c === nz.cat ? ' on' : '') + '" data-act="ncat" data-c="' + esc(c) + '">' + esc(c) + '<i>' + (c === '全部' ? D.news.length : D.news.filter(function (x) { return x.cat === c; }).length) + '</i></button>';
         }).join('') + '</div>' +
       '</div>' +
-      (list.length ? '<div class="news-grid">' + list.map(function (n) {
+      (list.length ? '<div class="news-grid">' + list.slice(0, nz.limit).map(function (n) {
         var i = D.news.indexOf(n);
         var on = S.saved.indexOf(i) >= 0;
         return '<div class="nitem">' +
@@ -732,13 +732,14 @@
             '<button class="btn ghost sm" data-act="ncopy" data-i="' + i + '">复制论据</button>' +
           '</div>' +
         '</div>';
-      }).join('') + '</div>' : '<div class="card"><div class="empty">没有匹配的素材，换个关键词试试。</div></div>');
+      }).join('') + '</div>' + (list.length > nz.limit ? '<div class="nmore-wrap"><button class="btn ghost" data-act="nmore">显示更多（还有 ' + (list.length - nz.limit) + ' 条）</button></div>' : '') : '<div class="card"><div class="empty">没有匹配的素材，换个关键词试试。</div></div>');
 
     mount(html);
     var inp = document.getElementById('newsQ');
     if (inp) {
       inp.addEventListener('input', function () {
         nz.q = inp.value.trim();
+        nz.limit = 36;
         var pos = inp.selectionStart;
         renderShizheng();
         var again = document.getElementById('newsQ');
@@ -1386,6 +1387,11 @@
       /* --- 时政 --- */
       case 'ncat':
         nz.cat = t.getAttribute('data-c');
+        nz.limit = 36;
+        renderShizheng();
+        break;
+      case 'nmore':
+        nz.limit += 36;
         renderShizheng();
         break;
       case 'nsave': {
