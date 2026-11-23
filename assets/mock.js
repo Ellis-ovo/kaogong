@@ -1,6 +1,6 @@
-/* 考公学习系统 · 模拟考试
- * 依赖 system.js 暴露的 window.KG（esc / save / S）
- * 结构：mk = { phase, cfg, qs, idx, picks, left, t, started, res }
+/* 考公学习系统 · 模拟考试 / 真题卷
+ * 依赖 system.js 暴露的 window.KG（esc / save / S / mount / toast）
+ * 结构：mk = { phase, tab, mode, mod, paper, qs, idx, picks, left, t, started, res }
  */
 window.MOCK = (function () {
   'use strict';
@@ -17,10 +17,49 @@ window.MOCK = (function () {
   };
   var FULL_RATIO = { '言语理解': 28, '判断推理': 30, '数量关系': 12, '资料分析': 15, '常识判断': 15 };
 
+  /* 真题卷：题量与模块配比照对应年份/类别的真实卷面；
+     题干由题库按固定种子组卷（同一套每次抽到的是同一批题）。 */
+  var PAPERS = [
+    {
+      id: 'gk2025f', year: 2025, name: '2025 国考 · 副省级', kind: '国考副省级', mins: 120, seed: 20250101,
+      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 15, '资料分析': 20, '常识判断': 15 }
+    },
+    {
+      id: 'gk2025d', year: 2025, name: '2025 国考 · 地市级', kind: '国考地市级', mins: 120, seed: 20250102,
+      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 10, '资料分析': 20, '常识判断': 20 }
+    },
+    {
+      id: 'gk2024f', year: 2024, name: '2024 国考 · 副省级', kind: '国考副省级', mins: 120, seed: 20240101,
+      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 15, '资料分析': 20, '常识判断': 15 }
+    },
+    {
+      id: 'gk2024d', year: 2024, name: '2024 国考 · 地市级', kind: '国考地市级', mins: 120, seed: 20240102,
+      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 10, '资料分析': 20, '常识判断': 20 }
+    },
+    {
+      id: 'lk2024a', year: 2024, name: '2024 联考 · A 卷', kind: '多省联考', mins: 120, seed: 20240201,
+      ratio: { '言语理解': 35, '判断推理': 35, '数量关系': 10, '资料分析': 20, '常识判断': 20 }
+    },
+    {
+      id: 'js2024a', year: 2024, name: '2024 江苏省考 · A 类', kind: '省考', mins: 120, seed: 20240301,
+      ratio: { '言语理解': 35, '判断推理': 40, '数量关系': 15, '资料分析': 20, '常识判断': 20 }
+    },
+    {
+      id: 'zj2024a', year: 2024, name: '2024 浙江省考 · A 卷', kind: '省考', mins: 120, seed: 20240401,
+      ratio: { '言语理解': 30, '判断推理': 35, '数量关系': 20, '资料分析': 20, '常识判断': 25 }
+    },
+    {
+      id: 'gd2023x', year: 2023, name: '2023 广东省考 · 县级', kind: '省考', mins: 90, seed: 20230501,
+      ratio: { '言语理解': 30, '判断推理': 30, '数量关系': 15, '资料分析': 15, '常识判断': 10 }
+    }
+  ];
+
   var mk = {
     phase: 'idle',
+    tab: 'mock',
     mode: 'quick',
     mod: '言语理解',
+    paper: null,
     qs: [],
     idx: 0,
     picks: {},
@@ -33,10 +72,9 @@ window.MOCK = (function () {
   function state() { return K().S; }
 
   function pool(mod) {
-    var all = (window.APP_DATA.questions || []).filter(function (q) {
+    return (window.APP_DATA.questions || []).filter(function (q) {
       return q && q.opts && q.opts.length === 4 && q.ans >= 0 && (!mod || q.mod === mod);
     });
-    return all;
   }
 
   function shuffle(a, seed) {
@@ -50,12 +88,13 @@ window.MOCK = (function () {
   }
 
   /* 按模块配额抽题；资料分析按材料成组抽取 */
-  function sample(quotas) {
+  function sample(quotas, seed) {
     var out = [];
+    var base = seed || 12345;
     Object.keys(quotas).forEach(function (mod) {
       var need = quotas[mod];
       if (!need) return;
-      var arr = shuffle(pool(mod).slice(), Date.now() + mod.length * 17);
+      var arr = shuffle(pool(mod).slice(), base + mod.length * 17);
       if (mod === '资料分析') {
         var groups = {}, keys = [];
         arr.forEach(function (q) {
@@ -63,7 +102,7 @@ window.MOCK = (function () {
           if (!groups[k]) { groups[k] = []; keys.push(k); }
           groups[k].push(q);
         });
-        shuffle(keys, Date.now() + 31);
+        shuffle(keys, base + 31);
         for (var i = 0; i < keys.length && countIn(out, mod) < need; i++) {
           var g = groups[keys[i]];
           for (var j = 0; j < g.length && countIn(out, mod) < need; j++) out.push(g[j]);
@@ -79,24 +118,47 @@ window.MOCK = (function () {
     return list.filter(function (q) { return q.mod === mod; }).length;
   }
 
+  function paperTotal(p) {
+    return Object.keys(p.ratio).reduce(function (s, k) { return s + p.ratio[k]; }, 0);
+  }
+
+  /* 当前卷子的统一配置：自组卷 or 真题卷 */
+  function cfg() {
+    if (mk.paper) {
+      return {
+        name: mk.paper.name,
+        secs: (mk.paper.mins || 120) * 60,
+        ratio: mk.paper.ratio,
+        n: mk.paper.n || paperTotal(mk.paper),
+        seed: mk.paper.seed,
+        isPaper: true
+      };
+    }
+    var m = MODES[mk.mode];
+    return { name: m.name + (mk.mode === 'one' ? ' · ' + mk.mod : ''), secs: m.secs, n: m.n, isPaper: false };
+  }
+
   function build() {
-    var mode = MODES[mk.mode];
+    var c = cfg();
     var qs;
+    if (c.isPaper) {
+      qs = sample(c.ratio, c.seed);
+      qs.sort(function (a, b) { return D_modules().indexOf(a.mod) - D_modules().indexOf(b.mod); });
+      return qs.slice(0, c.n);
+    }
     if (mk.mode === 'one') {
-      qs = pool(mk.mod).slice(0, mode.n);
-      qs = shuffle(qs, Date.now());
-    } else if (mk.mode === 'full') {
-      qs = sample(FULL_RATIO);
+      qs = shuffle(pool(mk.mod).slice(), Date.now()).slice(0, c.n);
+      return qs;
+    }
+    if (mk.mode === 'full') {
+      qs = sample(FULL_RATIO, Date.now());
     } else {
       var q2 = {};
-      D_modules().forEach(function (m) { q2[m] = Math.round(mode.n * (FULL_RATIO[m] / 100)); });
-      qs = sample(q2);
+      D_modules().forEach(function (m) { q2[m] = Math.round(c.n * (FULL_RATIO[m] / 100)); });
+      qs = sample(q2, Date.now());
     }
-    // 全卷 / 快测按模块顺序排列；同模块内保持随机
-    if (mk.mode !== 'one') {
-      qs.sort(function (a, b) { return D_modules().indexOf(a.mod) - D_modules().indexOf(b.mod); });
-    }
-    return qs.slice(0, mode.n);
+    qs.sort(function (a, b) { return D_modules().indexOf(a.mod) - D_modules().indexOf(b.mod); });
+    return qs.slice(0, c.n);
   }
 
   function D_modules() {
@@ -108,7 +170,7 @@ window.MOCK = (function () {
   function tick() {
     if (mk.phase !== 'run') return;
     var used = Math.round((Date.now() - mk.started) / 1000);
-    mk.left = MODES[mk.mode].secs - used;
+    mk.left = cfg().secs - used;
     var el = document.getElementById('mkTimer');
     if (el) {
       el.textContent = fmt(mk.left);
@@ -120,7 +182,7 @@ window.MOCK = (function () {
   function startTimer() {
     stopTimer();
     mk.started = Date.now();
-    mk.left = MODES[mk.mode].secs;
+    mk.left = cfg().secs;
     mk.t = setInterval(tick, 1000);
   }
   function stopTimer() { if (mk.t) { clearInterval(mk.t); mk.t = null; } }
@@ -133,13 +195,39 @@ window.MOCK = (function () {
     return viewIdle();
   }
 
-  function viewIdle() {
+  function histHTML() {
     var hist = state().mock || [];
-    var mode = MODES[mk.mode];
+    if (!hist.length) return '<div class="empty">还没有成绩。做一套，成绩会留在这里。</div>';
+    return '<div class="mk-hist">' + hist.map(function (h) {
+      var cls = h.score >= 75 ? 'hi' : h.score >= 55 ? 'mid' : 'lo';
+      var d = new Date(h.t);
+      return '<div class="mk-hrow"><div class="sc ' + cls + '">' + h.score + '</div>' +
+        '<div class="txt"><b>' + esc(h.name) + '</b> · ' + h.correct + '/' + h.total + ' 题 · 用时 ' +
+        Math.round(h.used / 60) + ' 分钟<br><span class="muted">' +
+        (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) +
+        '</span></div></div>';
+    }).join('') + '</div>';
+  }
+
+  function viewIdle() {
     var counts = {};
     D_modules().forEach(function (m) { counts[m] = pool(m).length; });
     var bank = D_modules().reduce(function (s, m) { return s + counts[m]; }, 0);
 
+    var tabs = '<div class="seg mk-tabs">' +
+      '<button class="' + (mk.tab === 'mock' ? 'on' : '') + '" data-act="mkTab" data-k="mock">模拟考试</button>' +
+      '<button class="' + (mk.tab === 'real' ? 'on' : '') + '" data-act="mkTab" data-k="real">真题卷</button>' +
+      '</div>';
+
+    var head = '<div class="tool-line"><h2>' + (mk.tab === 'real' ? '真题测试' : '模拟考试') + '</h2>' +
+      '<span class="sub">' + (mk.tab === 'real'
+        ? '按历年卷面结构成套计时，交卷出分并逐题解析'
+        : '按考试节奏完整做一套，交卷即出分与逐题解析') + '</span>' +
+      '<div class="spacer"></div><span class="tag">题库 ' + bank + ' 题</span></div>';
+
+    if (mk.tab === 'real') return head + tabs + viewPapers();
+
+    var mode = MODES[mk.mode];
     var modBtns = D_modules().map(function (m) {
       return '<button class="' + (mk.mod === m ? 'on' : '') + '" data-act="mkMode" data-m="' + esc(m) + '">' + esc(m) + '</button>';
     }).join('');
@@ -151,11 +239,7 @@ window.MOCK = (function () {
         '<em>' + m.n + ' 题 · ' + Math.round(m.secs / 60) + ' 分钟</em></button>';
     }).join('');
 
-    return '<div class="tool-line"><h2>模拟考试</h2>' +
-        '<span class="sub">按考试节奏完整做一套，交卷即出分与逐题解析</span>' +
-        '<div class="spacer"></div>' +
-        '<span class="tag">题库 ' + bank + ' 题</span></div>' +
-
+    return head + tabs +
       '<div class="mk-grid">' +
         '<div class="card">' +
           '<div class="card-h"><h2>选一套卷子</h2><span class="hint">交卷前不显示答案</span></div>' +
@@ -167,23 +251,11 @@ window.MOCK = (function () {
           '<div class="mk-start"><button class="btn" data-act="mkStart">开始考试</button>' +
           '<span class="small muted">倒计时 ' + Math.round(mode.secs / 60) + ' 分钟，到点自动交卷</span></div>' +
         '</div>' +
-
         '<div class="card">' +
           '<div class="card-h"><h2>历史成绩</h2><span class="hint">最多 10 次</span></div>' +
-          (hist.length
-            ? '<div class="mk-hist">' + hist.map(function (h) {
-              var cls = h.score >= 75 ? 'hi' : h.score >= 55 ? 'mid' : 'lo';
-              var d = new Date(h.t);
-              return '<div class="mk-hrow"><div class="sc ' + cls + '">' + h.score + '</div>' +
-                '<div class="txt"><b>' + esc(h.name) + '</b> · ' + h.correct + '/' + h.total + ' 题 · 用时 ' +
-                Math.round(h.used / 60) + ' 分钟<br><span class="muted">' +
-                (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) +
-                '</span></div></div>';
-            }).join('') + '</div>'
-            : '<div class="empty">还没有模拟成绩。做一套，成绩会留在这里。</div>') +
+          histHTML() +
         '</div>' +
       '</div>' +
-
       '<div class="card"><div class="card-h"><h2>题库构成</h2><span class="hint">按模块随机抽题</span></div>' +
         D_modules().map(function (m) {
           var w = Math.max(2, Math.round(counts[m] / Math.max(1, bank) * 100));
@@ -194,10 +266,61 @@ window.MOCK = (function () {
       '</div>';
   }
 
+  function viewPapers() {
+    var imported = (state().papers || []);
+
+    var rows = PAPERS.map(function (p) {
+      var n = paperTotal(p);
+      var mix = Object.keys(p.ratio).map(function (k) {
+        return k.slice(0, 2) + ' ' + p.ratio[k];
+      }).join(' · ');
+      return '<div class="mk-paper">' +
+        '<div class="mk-paper-info">' +
+          '<div class="mk-paper-h"><b>' + esc(p.name) + '</b>' +
+            '<span class="tag">' + esc(p.kind) + '</span>' +
+            '<span class="tag blue">' + n + ' 题 · ' + p.mins + ' 分钟</span>' +
+          '</div>' +
+          '<div class="small muted">模块配比：' + mix + '</div>' +
+        '</div>' +
+        '<div class="mk-paper-b"><button class="btn sm" data-act="mkPaper" data-id="' + p.id + '">开始这套</button></div>' +
+      '</div>';
+    }).join('');
+
+    var mine = imported.map(function (p, i) {
+      return '<div class="mk-paper">' +
+        '<div class="mk-paper-info">' +
+          '<div class="mk-paper-h"><b>' + esc(p.name) + '</b>' +
+            '<span class="tag">导入</span>' +
+            '<span class="tag blue">' + p.qs.length + ' 题 · ' + (p.mins || 120) + ' 分钟</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mk-paper-b"><button class="btn sm" data-act="mkPaper" data-id="imp' + i + '">开始这套</button>' +
+        '<button class="btn ghost sm" data-act="mkDel" data-id="imp' + i + '">删除</button></div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="card">' +
+        '<div class="card-h"><h2>内置真题卷</h2><span class="hint">题量与模块配比照真实卷面</span></div>' +
+        rows +
+        '<div class="mk-note">' +
+          '真题原文受版权限制不能直接内置，这里按各年份卷面的题量与模块配比，从题库按固定种子组卷——同一套每次抽到的题一样，可以反复做、横向比分数。' +
+        '</div>' +
+      '</div>' +
+      '<div class="card">' +
+        '<div class="card-h"><h2>导入真题</h2><span class="hint">粘贴题目就变成一套卷子</span></div>' +
+        (mine ? mine : '<div class="empty">还没有导入的真题卷。</div>') +
+        '<div class="divider"></div>' +
+        '<div class="small muted" style="margin-bottom:8px">支持 JSON：<code>[{"stem":"题干","opts":["A","B","C","D"],"ans":0,"exp":"解析","mod":"常识判断"}]</code>，也可以是 <code>{"name":"2023 国考","mins":120,"questions":[...]}</code>。</div>' +
+        '<textarea class="ta mk-import" id="mkImport" placeholder="把真题 JSON 粘到这里"></textarea>' +
+        '<div class="qbar"><button class="btn sm" data-act="mkImport">导入这套</button>' +
+        '<span class="small muted">题目只存在本机浏览器</span></div>' +
+      '</div>';
+  }
+
   function viewRun() {
     var q = mk.qs[mk.idx];
     if (!q) return viewDone();
-    var mode = MODES[mk.mode];
+    var c = cfg();
     var done = Object.keys(mk.picks).length;
     var pickIdx = mk.picks[q.id];
 
@@ -231,7 +354,7 @@ window.MOCK = (function () {
         '</div>' +
       '</div>' +
       '<div class="card mk-sheet">' +
-        '<div class="card-h"><h2>答题卡</h2><span class="hint">' + mode.name + '</span></div>' +
+        '<div class="card-h"><h2>答题卡</h2><span class="hint">' + esc(c.name) + '</span></div>' +
         '<div class="mk-nos">' + sheet + '</div>' +
         '<div class="divider"></div>' +
         '<button class="btn ghost sm" data-act="mkSubmit" style="width:100%">交卷</button>' +
@@ -256,7 +379,7 @@ window.MOCK = (function () {
         '<p class="stmt">' + esc(it.q.stem) + '</p>' +
         '<div class="ansline"><span class="bad">你选 ' + (it.pick >= 0 ? 'ABCD'[it.pick] : '未答') + '</span>' +
         '<span class="good">正确 ' + 'ABCD'[it.q.ans] + '</span></div>' +
-        '<div class="exp"><b>解析</b>' + esc(it.q.exp) + '</div></div>';
+        '<div class="exp"><b>解析</b>' + esc(it.q.exp || '暂无解析') + '</div></div>';
     }).join('');
 
     return '<div class="tool-line"><h2>考试成绩</h2>' +
@@ -283,8 +406,23 @@ window.MOCK = (function () {
 
   /* ---------------- 交互 ---------------- */
 
-  function start() {
-    var qs = build();
+  function findPaper(id) {
+    for (var i = 0; i < PAPERS.length; i++) if (PAPERS[i].id === id) return PAPERS[i];
+    if (id.indexOf('imp') === 0) {
+      var p = (state().papers || [])[+id.slice(3)];
+      if (p) return { id: id, name: p.name, kind: '导入', mins: p.mins || 120, n: p.qs.length, custom: p.qs };
+    }
+    return null;
+  }
+
+  function start(paper) {
+    mk.paper = paper || null;
+    var qs;
+    if (paper && paper.custom) {
+      qs = paper.custom.filter(function (q) { return q && q.opts && q.opts.length && q.ans >= 0; });
+    } else {
+      qs = build();
+    }
     if (!qs.length) { K().toast('题库为空'); return; }
     mk.qs = qs;
     mk.idx = 0;
@@ -315,7 +453,7 @@ window.MOCK = (function () {
     }).filter(Boolean);
 
     mk.res = {
-      name: MODES[mk.mode].name + (mk.mode === 'one' ? ' · ' + mk.mod : ''),
+      name: cfg().name,
       total: items.length,
       correct: correct,
       score: Math.round(correct / items.length * 100),
@@ -329,7 +467,6 @@ window.MOCK = (function () {
     S.mock = S.mock || [];
     S.mock.unshift({ t: Date.now(), name: mk.res.name, score: mk.res.score, correct: correct, total: items.length, used: used });
     S.mock = S.mock.slice(0, 10);
-    // 错题入错题本
     items.forEach(function (it) {
       if (it.ok) return;
       var w = S.wrong[it.q.id] || { n: 0, kind: '' };
@@ -341,15 +478,77 @@ window.MOCK = (function () {
     if (auto) K().toast('时间到，已自动交卷');
   }
 
+  /* 导入：接受数组或 {name, mins, questions} */
+  function doImport() {
+    var ta = document.getElementById('mkImport');
+    if (!ta) return;
+    var raw = (ta.value || '').trim();
+    if (!raw) { K().toast('先把题目粘进来'); return; }
+    var data;
+    try { data = JSON.parse(raw); } catch (e) { K().toast('JSON 解析失败：' + e.message.slice(0, 40)); return; }
+
+    var name = '导入的真题卷';
+    var mins = 120;
+    var list = data;
+    if (!Array.isArray(data)) {
+      name = data.name || name;
+      mins = data.mins || mins;
+      list = data.questions || data.qs || [];
+    }
+    if (!Array.isArray(list) || !list.length) { K().toast('没找到题目数组'); return; }
+
+    var ok = 0;
+    var qs = list.map(function (q, i) {
+      if (!q || !q.stem || !Array.isArray(q.opts) || q.opts.length < 2) return null;
+      var ans = typeof q.ans === 'number' ? q.ans : ('ABCD'.indexOf(String(q.ans || '').toUpperCase()));
+      if (ans < 0 || ans >= q.opts.length) return null;
+      ok++;
+      return {
+        id: 'imp' + Date.now() + '_' + i,
+        mod: q.mod || '常识判断',
+        tag: q.tag || '导入',
+        stem: String(q.stem),
+        opts: q.opts.slice(0, 4).map(String),
+        ans: ans,
+        exp: q.exp || q.explain || '（这道题没有附解析）',
+        mat: q.mat || ''
+      };
+    }).filter(Boolean);
+
+    if (!ok) { K().toast('没有一条能解析成题目，检查 stem/opts/ans 三个字段'); return; }
+
+    var S = state();
+    S.papers = S.papers || [];
+    S.papers.unshift({ name: name, mins: mins, qs: qs, t: Date.now() });
+    S.papers = S.papers.slice(0, 3);
+    K().save();
+    ta.value = '';
+    K().toast('已导入 ' + ok + ' 题，共 ' + qs.length + ' 题可用');
+    paint();
+  }
+
+  function delPaper(id) {
+    var S = state();
+    var i = +id.slice(3);
+    if (!S.papers || !S.papers[i]) return;
+    S.papers.splice(i, 1);
+    K().save();
+    paint();
+  }
+
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
     if (act.indexOf('mk') !== 0) return;
 
+    if (act === 'mkTab') { mk.tab = t.getAttribute('data-k'); paint(); return; }
     if (act === 'mkPick') { mk.mode = t.getAttribute('data-k'); paint(); return; }
     if (act === 'mkMode') { mk.mod = t.getAttribute('data-m'); paint(); return; }
-    if (act === 'mkStart') { start(); return; }
+    if (act === 'mkStart') { start(null); return; }
+    if (act === 'mkPaper') { start(findPaper(t.getAttribute('data-id'))); return; }
+    if (act === 'mkDel') { delPaper(t.getAttribute('data-id')); return; }
+    if (act === 'mkImport') { doImport(); return; }
     if (act === 'mkPickOpt') {
       var q = mk.qs[mk.idx];
       mk.picks[q.id] = +t.getAttribute('data-i');
@@ -367,7 +566,7 @@ window.MOCK = (function () {
       submit(false);
       return;
     }
-    if (act === 'mkRestart') { mk.phase = 'idle'; mk.res = null; paint(); return; }
+    if (act === 'mkRestart') { mk.phase = 'idle'; mk.res = null; mk.paper = null; paint(); return; }
   });
 
   return {
