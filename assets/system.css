@@ -617,3 +617,8 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
 /* ---------- 时政：分类计数与“显示更多” ---------- */
 .news-tools .mod-chip i{font-style:normal;font-size:11px;opacity:.5;margin-left:4px}
 .nmore-wrap{display:flex;justify-content:center;margin-top:18px}
+﻿
+/* ---------- 时政：来源标注 ---------- */
+.nsrc{font-size:11.5px;color:#9aa1ab;margin:-2px 0 9px}
+.nsrc a{color:#9aa1ab;text-decoration:none;border-bottom:1px dotted #c8ccd3}
+.nsrc a:hover{color:#3d4655;border-bottom-color:#3d4655}
