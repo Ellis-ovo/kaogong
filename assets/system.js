@@ -180,7 +180,7 @@
           '<a href="#xingce"><b>行测刷题</b><span>' + QCOUNT + ' 道题 · 答完即判分</span></a>' +
           '<a href="#shenlun"><b>申论批改</b><span>' + D.essays.length + ' 套题 · 采分点对照</span></a>' +
           '<a href="#shizheng"><b>时政素材</b><span>' + D.news.length + ' 条 · 可搜索收藏</span></a>' +
-          '<a href="#mianshi"><b>面试陪练</b><span>' + D.interview.length + ' 题 · 计时作答</span></a>' +
+          '<a href="#mianshi"><b>面试陪练</b><span>' + D.interview.length + ' 题 · 录音转写评分</span></a>' +
         '</div>' +
       '</div>';
 
@@ -740,11 +740,22 @@
   /* ============================================================
      面试
      ============================================================ */
-  var iv = { q: null, phase: 'idle', left: 300, t: null, covered: [] };
+  var iv = { q: null, phase: 'idle', left: 300, t: null, covered: [], score: 0, used: 0, text: '', final: '', interim: '', metrics: null, parts: null, advice: '', audioURL: null, mic: false, err: '', stream: null, mr: null, sr: null, chunks: [] };
+
+/* ============================================================
+     面试（录音 → 转写 → 评分）
+     ============================================================ */
+
+  function ivCanRec() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  }
+  function ivSRCtor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
 
   function renderMianshi() {
     var html = '<div class="tool-line"><h2>面试陪练</h2>' +
-      '<span class="sub">抽题 → 思考 1 分钟 → 作答 4 分钟</span>' +
+      '<span class="sub">抽题 → 录音作答 → 自动转写 → 按要点评分</span>' +
       '<div class="spacer"></div>' +
       '<button class="btn ghost sm" data-act="ivDraw">随机抽题</button></div>' +
       '<div class="iv-stage">' +
@@ -756,7 +767,11 @@
           '<div class="divider" style="margin:14px 0"></div>' +
           (iv.phase === 'scored'
             ? '<button class="btn sm" data-act="ivDraw" style="width:100%">换一题</button>'
-            : '<button class="btn sm" id="ivBtn" data-act="ivToggle" style="width:100%">' + (iv.phase === 'run' ? '结束作答' : '开始作答') + '</button>') +
+            : iv.phase === 'review'
+              ? '<button class="btn sm" data-act="ivScore" style="width:100%">按转写评分</button>'
+              : '<button class="btn sm" id="ivBtn" data-act="' + (iv.phase === 'run' ? 'ivStop' : 'ivStart') + '" style="width:100%">' +
+                (iv.phase === 'run' ? '结束作答' : '开始录音作答') + '</button>') +
+          (iv.phase === 'run' && iv.mic ? '<div class="rec-dot"><i></i>录音中</div>' : '') +
         '</div>' +
       '</div>' +
       '<div class="card"><div class="card-h"><h2>练习记录</h2><span class="hint">最近 6 次</span></div>' +
@@ -764,8 +779,8 @@
           var cls = r.score >= 80 ? 'hi' : r.score >= 60 ? 'mid' : 'lo';
           var d = new Date(r.t);
           return '<div class="iv-row"><div class="sc ' + cls + '">' + r.score + '</div>' +
-            '<div class="txt"><b style="color:var(--ink)">' + esc(r.type) + '</b> · 用时 ' + r.used + ' 秒 · ' +
-            (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + esc(r.q) + '</div></div>';
+            '<div class="txt"><b style="color:var(--ink)">' + esc(r.type) + '</b> · 用时 ' + r.used + ' 秒' +
+            (r.spm ? ' · ' + r.spm + ' 字/分' : '') + ' · ' + (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + esc(r.q) + '</div></div>';
         }).join('') + '</div>' : '<div class="empty">还没有练习记录。抽一道题，开口说三分钟就有记录。</div>') +
       '</div>';
 
@@ -773,7 +788,10 @@
   }
 
   function phaseText() {
-    return iv.phase === 'run' ? '正在作答，注意结构' : iv.phase === 'scored' ? '已评分，可抽取下一题' : '抽题后可开始计时';
+    if (iv.phase === 'run') return iv.mic ? '正在录音，说完点结束' : '文字模式：说完再敲文字';
+    if (iv.phase === 'review') return '已停止，检查转写再评分';
+    if (iv.phase === 'scored') return '已评分，可抽取下一题';
+    return '抽题后可开始计时';
   }
   function fmt(s) {
     var m = Math.floor(s / 60);
@@ -783,70 +801,316 @@
   function ivCardHTML() {
     if (!iv.q) {
       return '<div class="empty" style="padding:60px 10px">还没抽题。<br><br>' +
-        '<button class="btn" data-act="ivDraw">随机抽一道</button></div>';
+        '<button class="btn" data-act="ivDraw">随机抽一道</button>' +
+        '<div class="small muted" style="margin-top:14px;line-height:1.7">抽题后点「开始录音作答」，麦克风录下的声音会实时转成文字，<br>停止后按要点自动评分。录音和文字都只存在你自己的浏览器里。</div></div>';
     }
     var q = iv.q;
-    var points = q.points.map(function (p, i) {
+
+    var chips = q.points.map(function (p, i) {
       var on = iv.covered.indexOf(i) >= 0;
       return '<span class="' + (on ? 'tag green' : '') + '" data-act="ivPoint" data-i="' + i + '" ' +
         'style="cursor:pointer;' + (on ? '' : 'background:#f1f2f5;color:var(--ink-2)') + '">' + (on ? '✓ ' : '') + esc(p) + '</span>';
     }).join('');
 
-    return '<div class="qhead"><span class="tag blue">' + esc(q.type) + '</span>' +
-        '<div class="spacer"></div><span class="muted small">已说到 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点</span></div>' +
-      '<p class="iv-q">' + esc(q.q) + '</p>' +
-      (iv.phase === 'scored' ?
-        '<div class="divider"></div>' +
-        '<div class="grade"><div><div class="score-big">' + iv.score + '<small>/100</small></div>' +
-        '<div class="lvl">要点覆盖 ' + iv.covered.length + ' / ' + q.points.length + ' · 用时 ' + iv.used + ' 秒</div></div>' +
-        '<div class="small muted" style="line-height:1.8">' +
-          (iv.score >= 80 ? '结构完整，考场可直接用。' : iv.score >= 60 ? '主干有了，结尾缺“落实/长效”一层。' : '要点覆盖偏少，先练“表态—分析—对策”三段。') +
-        '</div></div>' +
-        '<div class="explain"><b>追问：</b>' + esc(q.follow) + '<br><span class="small muted">参考作答要点：' + q.points.map(function (p) { return esc(p); }).join(' / ') + '</span></div>' +
-        '<div class="qbar"><button class="btn sm" data-act="ivSave">保存本次评分</button>' +
-        '<button class="btn ghost sm" data-act="ivDraw">换一题</button></div>'
-        :
-        '<div class="divider"></div>' +
-        '<div class="small muted" style="margin-bottom:8px">作答后，点选你说到的要点（自评，比逐字打分更接近真实考场）：</div>' +
-        '<div class="iv-points">' + points + '</div>' +
-        '<div class="qbar"><button class="btn" data-act="ivGrade">结束并看评分</button>' +
-        '<span class="small muted">按要点覆盖比例计分</span></div>');
+    var head = '<div class="qhead"><span class="tag blue">' + esc(q.type) + '</span>' +
+        '<div class="spacer"></div><span class="muted small">' +
+        (iv.phase === 'scored' ? '命中 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点' :
+         iv.phase === 'run' ? '实时转写中' : '已说到 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点') +
+        '</span></div>' +
+      '<p class="iv-q">' + esc(q.q) + '</p>';
+
+    if (iv.phase === 'idle') {
+      return head + '<div class="divider"></div>' +
+        '<div class="small muted" style="line-height:1.9">' +
+          '· 结构化面试按「怎么看—为什么—怎么办」三段说，2–3 分钟最合适<br>' +
+          '· 点「开始录音作答」后浏览器会请求麦克风权限（只在本机处理）<br>' +
+          '· 说不了那么快也没关系，先求说完，再求说顺' +
+        '</div>' +
+        (iv.err ? '<div class="iv-err">' + esc(iv.err) + '</div>' : '') +
+        '<div class="qbar"><button class="btn" data-act="ivStart">开始录音作答</button>' +
+        '<button class="btn ghost sm" data-act="ivTextMode">没有麦克风，用文字</button></div>';
+    }
+
+    if (iv.phase === 'run') {
+      return head +
+        '<div class="iv-live" id="ivLive">' + (iv.text ? esc(iv.text) : '<span class="iv-ph">' + (iv.mic ? '正在听……开口说第一句' : '说完把话敲在这里') + '</span>') + '</div>' +
+        (iv.mic ? '' : '<textarea class="ta iv-ta" id="ivText" placeholder="把刚才说的内容敲在这里，越接近原话越准"></textarea>') +
+        (iv.err ? '<div class="iv-err">' + esc(iv.err) + '</div>' : '') +
+        '<div class="qbar"><button class="btn" data-act="ivStop">结束作答</button>' +
+        '<span class="small muted">' + (iv.mic ? '录完会自动转写，可手动改错字' : '文字模式同样按要点评分') + '</span></div>';
+    }
+
+    if (iv.phase === 'review') {
+      return head + '<div class="divider"></div>' +
+        '<div class="small muted" style="margin-bottom:8px">检查转写（识别错的字可以改），再评分：</div>' +
+        '<textarea class="ta iv-ta" id="ivText">' + esc(iv.text) + '</textarea>' +
+        (iv.audioURL ? '<audio class="iv-audio" controls src="' + iv.audioURL + '"></audio>' : '') +
+        '<div class="qbar"><button class="btn" data-act="ivScore">按转写评分</button>' +
+        '<button class="btn ghost sm" data-act="ivTogglePoints">手动改要点</button></div>' +
+        '<div class="iv-points" id="ivPoints" style="display:none">' + chips + '</div>';
+    }
+
+    var m = iv.metrics || {};
+    var parts = iv.parts || {};
+    return head + '<div class="divider"></div>' +
+      '<div class="grade iv-grade">' +
+        '<div><div class="score-big">' + iv.score + '<small>/100</small></div>' +
+        '<div class="lvl">命中 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点 · 用时 ' + iv.used + ' 秒' + (m.est ? '（按字数估算）' : '') + '</div></div>' +
+        '<div class="grade-rows">' +
+          '<div class="gr"><span>要点覆盖</span><b>' + (parts.cov || 0) + '</b><i>/55</i></div>' +
+          '<div class="gr"><span>结构</span><b>' + (parts.struct || 0) + '</b><i>/15</i></div>' +
+          '<div class="gr"><span>表达</span><b>' + (parts.expr || 0) + '</b><i>/20</i></div>' +
+          '<div class="gr"><span>时长</span><b>' + (parts.time || 0) + '</b><i>/10</i></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="iv-stats">' +
+        '<span>字数 <b>' + (m.chars || 0) + '</b></span>' +
+        '<span>语速 <b>' + (m.spm || 0) + '</b> 字/分</span>' +
+        '<span>口头语 <b>' + (m.fill || 0) + '</b> 次</span>' +
+      '</div>' +
+      '<div class="iv-points">' + chips + '</div>' +
+      '<div class="iv-note">' + esc(iv.advice || '') + '</div>' +
+      (iv.audioURL ? '<audio class="iv-audio" controls src="' + iv.audioURL + '"></audio>' : '') +
+      '<details class="iv-details"><summary>看转写全文</summary><div class="iv-text">' + esc(iv.text || '（没有转写内容）') + '</div></details>' +
+      '<div class="qbar"><button class="btn sm" data-act="ivSave">保存本次评分</button>' +
+      '<button class="btn ghost sm" data-act="ivDraw">换一题</button></div>';
   }
 
-  function ivToggle() {
-    if (!iv.q) { toast('先抽一道题'); return; }
-    if (iv.phase === 'run') {
-      clearInterval(iv.t);
-      iv.t = null;
-      iv.phase = 'review';
-      renderMianshi();
-      return;
-    }
-    iv.phase = 'run';
-    iv.left = 300;
-    renderMianshi();
+  function ivStartTimer() {
     clearInterval(iv.t);
+    iv.left = 300;
+    var el = document.getElementById('ivTimer');
+    if (el) { el.textContent = fmt(300); el.classList.remove('warn'); }
     iv.t = setInterval(function () {
       iv.left--;
-      var el = document.getElementById('ivTimer');
-      if (el) {
-        el.textContent = fmt(Math.max(0, iv.left));
-        el.classList.toggle('warn', iv.left <= 60);
+      var e = document.getElementById('ivTimer');
+      if (e) {
+        e.textContent = fmt(Math.max(0, iv.left));
+        e.classList.toggle('warn', iv.left <= 60);
       }
-      if (iv.left <= 0) { clearInterval(iv.t); iv.t = null; iv.phase = 'review'; renderMianshi(); toast('时间到，先看要点覆盖'); }
+      if (iv.left <= 0) {
+        clearInterval(iv.t); iv.t = null;
+        toast('时间到，自动结束');
+        ivStop();
+      }
     }, 1000);
   }
 
-  function ivGrade() {
-    if (!iv.covered.length) { toast('至少要勾选一个说到的要点'); return; }
+  function ivStart() {
+    if (!iv.q) { toast('先抽一道题'); return; }
+    iv.err = ''; iv.text = ''; iv.final = ''; iv.interim = '';
+    iv.covered = []; iv.audioURL = null; iv.metrics = null; iv.parts = null;
+
+    if (!ivCanRec()) {
+      iv.mic = false;
+      iv.err = '这个浏览器不支持录音，已切到文字模式';
+      iv.phase = 'run';
+      renderMianshi();
+      ivStartTimer();
+      return;
+    }
+
+    // 先进入作答态，权限/设备问题回来再降级
+    iv.mic = true;
+    iv.t0 = Date.now();
+    iv.phase = 'run';
+    renderMianshi();
+    ivStartTimer();
+    ivStartSR();
+
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then(function (stream) {
+      iv.stream = stream;
+      try {
+        var mr = new MediaRecorder(stream);
+        iv.mr = mr;
+        iv.chunks = [];
+        mr.ondataavailable = function (e) { if (e.data && e.data.size) iv.chunks.push(e.data); };
+        mr.onstop = function () {
+          try {
+            var blob = new Blob(iv.chunks, { type: (iv.chunks[0] && iv.chunks[0].type) || 'audio/webm' });
+            if (iv.audioURL) URL.revokeObjectURL(iv.audioURL);
+            iv.audioURL = URL.createObjectURL(blob);
+          } catch (e) { /* 忽略 */ }
+          if (iv.phase === 'review') renderMianshi();
+        };
+        mr.start();
+      } catch (e) {
+        iv.mic = false;
+        iv.err = '录音启动失败，已切到文字模式';
+        renderMianshi();
+      }
+    }).catch(function (err) {
+      iv.mic = false;
+      iv.err = (err && err.name === 'NotAllowedError')
+        ? '麦克风权限被拒绝（可在地址栏重新允许），先用文字模式'
+        : '拿不到麦克风，先用文字模式';
+      renderMianshi();
+    });
+  }
+
+  function ivStartSR() {
+    var C = ivSRCtor();
+    if (!C) {
+      iv.err = '当前浏览器不支持语音识别（Chrome / Edge 可用），录音照常，转写请手动补';
+      return;
+    }
+    try {
+      var sr = new C();
+      iv.sr = sr;
+      sr.lang = 'zh-CN';
+      sr.continuous = true;
+      sr.interimResults = true;
+      sr.onresult = function (e) {
+        var it = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          var r = e.results[i];
+          if (r.isFinal) iv.final += r[0].transcript;
+          else it += r[0].transcript;
+        }
+        iv.interim = it;
+        iv.text = (iv.final + it).trim();
+        var live = document.getElementById('ivLive');
+        if (live) live.textContent = iv.text || '正在听……开口说第一句';
+      };
+      sr.onerror = function (e) {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          iv.err = '语音识别不可用，请手动补转写';
+        } else if (e.error === 'network') {
+          iv.err = '语音识别需要联网（Chrome 会连 Google 的识别服务）；没网就手动补转写';
+        }
+      };
+      sr.onend = function () {
+        if (iv.phase === 'run' && iv.sr) { try { sr.start(); } catch (e) { } }
+      };
+      sr.start();
+    } catch (e) {
+      iv.err = '语音识别启动失败，请手动补转写';
+    }
+  }
+
+  function ivStop() {
+    clearInterval(iv.t);
+    iv.t = null;
+    if (iv.sr) { var s = iv.sr; iv.sr = null; try { s.stop(); } catch (e) { } }
+    if (iv.mr && iv.mr.state !== 'inactive') { try { iv.mr.stop(); } catch (e) { } }
+    if (iv.stream) { iv.stream.getTracks().forEach(function (t) { t.stop(); }); iv.stream = null; }
+    if (iv.phase === 'run') {
+      var ta = document.getElementById('ivText');
+      if (ta) iv.text = ta.value;
+      iv.text = (iv.text || '').trim();
+      iv.used = ivUsed(iv.text);
+      iv.phase = 'review';
+      renderMianshi();
+      setTimeout(function () {
+        if (iv.phase === 'review' && iv.audioURL) renderMianshi();
+      }, 350);
+    }
+  }
+
+  function ivTextMode() {
+    iv.mic = false;
+    iv.t0 = null;
+    iv.err = '';
+    iv.phase = 'run';
+    iv.left = 300;
+    renderMianshi();
+    ivStartTimer();
+  }
+
+
+  function ivUsed(text) {
+    var chars = (String(text).match(/[\u4e00-\u9fa5]/g) || []).length;
+    var u;
+    if (iv.mic && iv.t0) u = Math.round((Date.now() - iv.t0) / 1000);
+    else u = Math.round(chars / 220 * 60);
+    return Math.min(300, Math.max(chars ? 20 : 1, u));
+  }
+
+  function ivMetrics(text, used) {
+    var chars = (String(text).match(/[\u4e00-\u9fa5]/g) || []).length;
+    var spm = used > 0 ? Math.round(chars / used * 60) : 0;
+    var fill = (String(text).match(/(嗯+|呃+|那个|然后呢|就是说|这个这个|啊这)/g) || []).length;
+    var rate = chars ? fill / chars * 100 : 0;
+    return { chars: chars, spm: spm, fill: fill, rate: Math.round(rate * 10) / 10 };
+  }
+
+  function ivMatch(text) {
+    var plain = String(text).replace(/[^\u4e00-\u9fa5]/g, '');
+    var hit = [];
+    iv.q.points.forEach(function (p, i) {
+      var core = p.replace(/[^\u4e00-\u9fa5]/g, '');
+      if (!core) return;
+      if (core.length <= 3) {
+        if (plain.indexOf(core) >= 0) hit.push(i);
+        return;
+      }
+      var grams = [], total = 0, got = 0;
+      for (var k = 0; k < core.length - 1; k++) {
+        var g = core.substr(k, 2);
+        total++;
+        if (plain.indexOf(g) >= 0) got++;
+      }
+      if (total && got / total >= 0.5) hit.push(i);
+    });
+    return hit;
+  }
+
+  function ivScore() {
+    if (!iv.q) return;
+    var ta = document.getElementById('ivText');
+    if (ta) iv.text = ta.value;
+    iv.text = (iv.text || '').trim();
+    if (!iv.text) { toast('还没有转写内容，先说一段或敲几句'); return; }
+
+    var used = ivUsed(iv.text);
+    iv.used = used;
+    var m = ivMetrics(iv.text, used);
+    m.est = !(iv.mic && iv.t0);
+    iv.metrics = m;
+
+    iv.covered = ivMatch(iv.text);
+
+    var total = iv.q.points.length || 1;
+    var cov = iv.covered.length / total;
+    var sCov = Math.round(55 * cov);
+    var order = /首先|其次|再次|最后|第一|第二|第三|一是|二是|其一|其二/.test(iv.text);
+    var close = /落实|机制|长效|闭环|跟踪|评估|回访|总结|下一步/.test(iv.text);
+    var sStruct = (order ? 8 : 0) + (close ? 7 : 0);
+    var sExpr = 20;
+    if (m.spm && (m.spm < 110 || m.spm > 340)) sExpr -= 4;
+    if (m.rate > 3) sExpr -= 8;
+    if (m.rate > 6) sExpr -= 6;
+    sExpr = Math.max(0, sExpr);
+    var sTime = used >= 180 ? 10 : used >= 120 ? 7 : used >= 60 ? 4 : 1;
+
+    iv.parts = { cov: sCov, struct: sStruct, expr: sExpr, time: sTime };
+    iv.score = Math.max(5, Math.min(100, sCov + sStruct + sExpr + sTime));
     iv.phase = 'scored';
-    iv.score = Math.round(iv.covered.length / iv.q.points.length * 100);
-    iv.used = Math.max(1, 300 - Math.max(0, iv.left));
+    iv.advice = ivAdvice(iv.score, m, cov, order, close);
     renderMianshi();
   }
 
+  function ivAdvice(score, m, cov, order, close) {
+    var a = [];
+    if (cov < 0.4) a.push('要点覆盖偏低，先把「表态—原因—对策」每层各说一句，别只讲一个角度。');
+    else if (cov < 0.7) a.push('主干有了，漏掉的要点补一句就够，不要另起一段。');
+    else a.push('要点基本齐了，接下来练表达的干净程度。');
+    if (!order) a.push('没有明显的分条信号，加「第一…第二…最后」让考官听得出结构。');
+    if (!close) a.push('结尾缺「落实/长效」这一层，收尾时补一句怎么盯到底。');
+    if (m.spm && m.spm < 110) a.push('语速偏慢（' + m.spm + ' 字/分），考场上容易超时，练到 200 字/分左右。');
+    if (m.spm > 340) a.push('语速偏快（' + m.spm + ' 字/分），显紧张，刻意在分条处停半秒。');
+    if (m.rate > 3) a.push('口头语偏多（' + m.fill + ' 次），录音里听到「嗯、那个」就换成停顿。');
+    if (m.chars < 150) a.push('内容偏短，只有 ' + m.chars + ' 字；结构化面试一题通常 400 字上下。');
+    return a.slice(0, 3).join(' ');
+  }
+
   function ivSave() {
-    S.iv.unshift({ id: iv.q.id, q: iv.q.q, type: iv.q.type, score: iv.score, used: iv.used, t: Date.now() });
+    if (!iv.q) return;
+    S.iv.unshift({
+      id: iv.q.id, q: iv.q.q, type: iv.q.type, score: iv.score, used: iv.used,
+      spm: (iv.metrics && iv.metrics.spm) || 0, chars: (iv.metrics && iv.metrics.chars) || 0,
+      text: iv.text, t: Date.now()
+    });
     S.iv = S.iv.slice(0, 30);
     addMinutes(18);
     save();
@@ -854,6 +1118,11 @@
     iv.covered = [];
     toast('已保存到练习记录');
     renderMianshi();
+  }
+
+  function ivTogglePoints() {
+    var el = document.getElementById('ivPoints');
+    if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
   }
 
   /* ============================================================
@@ -1142,11 +1411,26 @@
         iv.phase = 'idle';
         iv.left = 300;
         iv.covered = [];
+        iv.text = ''; iv.final = ''; iv.interim = '';
+        iv.metrics = null; iv.parts = null; iv.advice = '';
+        iv.audioURL = null; iv.err = ''; iv.mic = false; iv.score = 0; iv.used = 0;
         renderMianshi();
         break;
       }
-      case 'ivToggle':
-        ivToggle();
+      case 'ivStart':
+        ivStart();
+        break;
+      case 'ivStop':
+        ivStop();
+        break;
+      case 'ivTextMode':
+        ivTextMode();
+        break;
+      case 'ivScore':
+        ivScore();
+        break;
+      case 'ivTogglePoints':
+        ivTogglePoints();
         break;
       case 'ivPoint': {
         var pi = +t.getAttribute('data-i');
@@ -1156,9 +1440,6 @@
         renderMianshi();
         break;
       }
-      case 'ivGrade':
-        ivGrade();
-        break;
       case 'ivSave':
         ivSave();
         break;
