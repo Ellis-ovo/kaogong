@@ -701,7 +701,11 @@
   var nz = { q: '', cat: '全部' , limit: 36 };
 
   function renderShizheng() {
+    var order = ['民生', '治理', '经济', '文化', '生态', '乡村', '科技', '法治'];
     var cats = ['全部'];
+    order.forEach(function (c) {
+      if (D.news.some(function (n) { return n.cat === c; })) cats.push(c);
+    });
     D.news.forEach(function (n) { if (cats.indexOf(n.cat) < 0) cats.push(n.cat); });
 
     var list = D.news.filter(function (n) {
@@ -728,6 +732,7 @@
           '</div>' +
           '<h4>' + esc(n.title) + '</h4>' +
           '<p>' + esc(n.body) + '</p>' +
+          (n.src ? '<div class="nsrc">来源：' + (n.url ? '<a href="' + esc(n.url) + '" target="_blank" rel="noopener">' + esc(n.src) + '</a>' : esc(n.src)) + '</div>' : '') +
           '<div class="foot"><span class="tag blue">可用角度：' + esc(n.angle) + '</span><div class="spacer"></div>' +
             '<button class="btn ghost sm" data-act="ncopy" data-i="' + i + '">复制论据</button>' +
           '</div>' +
@@ -1405,7 +1410,7 @@
       }
       case 'ncopy': {
         var ni = D.news[+t.getAttribute('data-i')];
-        var txt = ni.title + '。' + ni.body + '（可用角度：' + ni.angle + '）';
+        var txt = ni.title + '。' + ni.body + '（可用角度：' + ni.angle + '）' + (ni.src ? '（来源：' + ni.src + '）' : '');
         if (navigator.clipboard) navigator.clipboard.writeText(txt);
         toast('已复制，可直接粘进素材本');
         break;
