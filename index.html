@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>考公学习系统 — 行测、申论、时政、面试，一套系统跑完</title>
+<meta name="description" content="把备考拆成可执行的每一天：行测智能刷题与错题归因、申论批改与表达规范化、时政素材库、面试 AI 陪练。">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<!-- ================= 导航 ================= -->
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top"><span class="mark">考</span>考公学习系统</a>
+
+    <nav class="nav-links" id="navLinks">
+      <div class="nav-item" data-menu>
+        <button type="button">产品<i class="caret"></i></button>
+        <div class="menu">
+          <div class="col">
+            <h6>四个模块</h6>
+            <a href="app.html#xingce">行测 · 智能刷题<span>2.4 万题，按考点归因</span></a>
+            <a href="app.html#shenlun">申论 · 批改与表达<span>采分点评分，逐句标注</span></a>
+            <a href="app.html#shizheng">时政 · 每日素材<span>32 类主题，可一键引用</span></a>
+            <a href="app.html#mianshi">面试 · AI 陪练<span>全流程模拟与追问</span></a>
+          </div>
+          <div class="col">
+            <h6>用得最多</h6>
+            <a href="#demo">申论口语规范化<span>把大白话翻成能落笔的句子</span></a>
+            <a href="app.html#today">学习计划<span>今天该做什么，系统排</span></a>
+            <a href="#pricing">价格与权益<span>先免费试用一周</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-menu>
+        <button type="button">学习系统<i class="caret"></i></button>
+        <div class="menu">
+          <div class="col">
+            <h6>进度</h6>
+            <a href="app.html#today">每日任务与排期<span>按考试倒计时自动调</span></a>
+            <a href="app.html#today">考点掌握度<span>哪些还没过，一眼看清</span></a>
+          </div>
+          <div class="col">
+            <h6>复盘</h6>
+            <a href="app.html#xingce">错题本与归因<span>知识盲区／审题偏差／计算失误</span></a>
+            <a href="app.html#xingce">同类题重推<span>第二天自动出现</span></a>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-menu>
+        <button type="button">资源<i class="caret"></i></button>
+        <div class="menu">
+          <div class="col">
+            <h6>资料</h6>
+            <a href="app.html#shizheng">时政素材库<span>每日 8 条精选</span></a>
+            <a href="app.html#shizheng">真题与解析<span>近十年国考省考</span></a>
+          </div>
+          <div class="col">
+            <h6>方法</h6>
+            <a href="app.html#shenlun">申论表达手册<span>词汇替换与句式</span></a>
+            <a href="app.html#mianshi">面试答题结构<span>六类题型模板</span></a>
+          </div>
+        </div>
+      </div>
+
+      <a class="nav-cta" href="app.html#today">打开工作台</a>
+    </nav>
+
+    <button class="nav-burger" id="burger" aria-label="菜单" aria-expanded="false">
+      <i></i><i></i><i></i>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-menu" id="mobileMenu">
+  <div class="grp">
+    <h6>产品</h6>
+    <a href="app.html#xingce">行测 · 智能刷题<small>错题归因</small></a>
+    <a href="app.html#shenlun">申论 · 批改与表达<small>逐句标注</small></a>
+    <a href="app.html#shizheng">时政 · 每日素材<small>32 类主题</small></a>
+    <a href="app.html#mianshi">面试 · AI 陪练<small>全流程模拟</small></a>
+  </div>
+  <div class="grp">
+    <h6>学习系统</h6>
+    <a href="app.html#today">学习计划与排期</a>
+    <a href="app.html#xingce">错题本与归因</a>
+    <a href="#demo">申论口语规范化</a>
+  </div>
+  <div class="grp">
+    <h6>价格</h6>
+    <a href="#pricing">价格与权益</a>
+  </div>
+</div>
+
+<!-- ================= Hero ================= -->
+<main id="top">
+<section class="sec sec--full hero">
+  <div class="sec-inner">
+    <span class="kicker reveal"><i></i>2027 年度国家公务员考试 · 春季备考</span>
+    <h1 class="reveal" style="--d:80ms">备考不是堆资料的体力活，<br><em>是一门一门地过。</em></h1>
+    <p class="lede reveal" style="--d:160ms">行测刷题、申论批改、时政积累、面试陪练。四个模块共用一条进度线，不用在五个 App 之间搬资料。</p>
+    <div class="pill-row reveal" style="--d:240ms">
+      <a class="pill pill--blue" href="app.html#today">开始备考</a>
+      <a class="pill pill--ghost" href="#demo">试试申论工具</a>
+    </div>
+
+    <div class="hero-visual reveal" style="--d:320ms">
+      <div class="win" data-parallax="0.06">
+        <div class="win-bar"><span></span><span></span><span></span><em>考公学习系统 · 今日</em></div>
+        <div class="win-body">
+          <div class="win-side">
+            <div class="ring" style="--p:78"><b>78<span>%</span></b></div>
+            <i>今日任务完成度</i>
+            <div class="streak">已连续 <b>46</b> 天</div>
+          </div>
+          <div class="win-main">
+            <div class="win-head">
+              <h4>11 月 23 日 · 周一</h4>
+              <small>距考试 156 天</small>
+            </div>
+            <div class="task done">
+              <span class="dot"></span><span class="t">判断推理 · 图形规律 40 题</span>
+              <span class="bar"><i style="width:100%"></i></span><span class="n">40/40</span>
+            </div>
+            <div class="task done">
+              <span class="dot"></span><span class="t">言语理解 · 片段阅读 20 题</span>
+              <span class="bar"><i style="width:100%"></i></span><span class="n">20/20</span>
+            </div>
+            <div class="task">
+              <span class="dot"></span><span class="t">申论 · 概括归纳 1 篇</span>
+              <span class="bar"><i style="width:60%"></i></span><span class="n">3/5</span>
+            </div>
+            <div class="task">
+              <span class="dot"></span><span class="t">时政 · 今日 8 条</span>
+              <span class="bar"><i style="width:25%"></i></span><span class="n">2/8</span>
+            </div>
+            <div class="chart" id="heroChart">
+              <div class="c"><i style="--h:44%"></i><span>一</span></div>
+              <div class="c"><i style="--h:58%"></i><span>二</span></div>
+              <div class="c"><i style="--h:36%"></i><span>三</span></div>
+              <div class="c"><i style="--h:72%"></i><span>四</span></div>
+              <div class="c hot"><i style="--h:88%"></i><span>五</span></div>
+              <div class="c"><i style="--h:64%"></i><span>六</span></div>
+              <div class="c"><i style="--h:52%"></i><span>日</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-cue"><span></span>向下滚动</div>
+  </div>
+</section>
+
+<!-- ================= 行测 ================= -->
+<section class="sec sec--dark" id="xingce">
+  <div class="sec-inner">
+    <div class="split">
+      <div>
+        <p class="eyebrow reveal">行测 · 智能刷题</p>
+        <h2 class="display display--sm reveal" style="--d:60ms">错题不是再做一遍，<br>是追到为什么错。</h2>
+        <p class="copy reveal" style="--d:120ms">系统把每道错题拆成 <strong>知识盲区、审题偏差、计算失误</strong> 三类，给出对应的补救动作：补课、练同型题、还是改做题节奏。第二天，同类题自动回到练习里。</p>
+        <ul class="feat-list">
+          <li class="reveal" style="--d:180ms"><span><b>按考点而非按套卷</b>2.4 万题拆到 6 大模块 148 个考点，弱项单独练。</span></li>
+          <li class="reveal" style="--d:230ms"><span><b>智能组卷</b>按当前掌握度配比，简单题不浪费时间，难题不打击信心。</span></li>
+          <li class="reveal" style="--d:280ms"><span><b>错题归因</b>同一道题，错了三次以上会自动进入「顽固错题」清单。</span></li>
+        </ul>
+      </div>
+
+      <div class="reveal" style="--d:140ms">
+        <div class="qcard" data-parallax="-0.04">
+          <div class="badge-float">本题正确率<b>82%</b></div>
+          <div class="qtop">
+            <span class="tag">判断推理 · 图形规律</span>
+            <span class="qno">第 17 / 40 题</span>
+          </div>
+          <p class="q">从所给的四个选项中，选出最符合左边五个图形一致性规律的一项。</p>
+          <div class="opts">
+            <div class="opt"><span class="k">A</span>图形整体顺时针旋转 90°</div>
+            <div class="opt on"><span class="k">B</span>封闭区域数量依次递增</div>
+            <div class="opt"><span class="k">C</span>线条交点数保持恒定</div>
+            <div class="opt"><span class="k">D</span>对称轴方向逐次改变</div>
+          </div>
+          <div class="qnote"><b>归因：审题偏差。</b>你在「交点数」上停留了 62 秒——这类题的判断顺序应先看封闭区域，再看交点。已为你推送 12 道同型题。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 申论 + 可交互工具 ================= -->
+<section class="sec" id="shenlun">
+  <div class="sec-inner">
+    <div class="center">
+      <p class="eyebrow reveal">申论 · 批改与表达</p>
+      <h2 class="display display--sm reveal" style="--d:60ms">观点对了，还得写得像申论。</h2>
+      <p class="lede reveal" style="--d:120ms">按采分点分档评分，逐句标出「表述口语化」「要点重复」「缺对策落脚」；下面的工具，把一句大白话直接翻成能落笔的句子。</p>
+    </div>
+
+    <div class="demo-wrap reveal" id="demo" style="--d:160ms">
+      <div class="demo-top">
+        <span>申论模块 · 口语规范化</span>
+        <span class="live"><i></i>本地规则引擎运行中</span>
+      </div>
+      <div class="demo-grid">
+        <div class="demo-cell">
+          <div class="demo-label"><span class="num">1</span>写下你的原话</div>
+          <textarea id="slIn" placeholder="例：我觉得有些干部就是不下基层，坐在办公室里拍脑袋决策。">我觉得有些干部就是不下基层，坐在办公室里拍脑袋决策，老百姓办事跑好几趟还办不成。</textarea>
+          <div class="demo-row">
+            <div class="seg" id="slLevel">
+              <button type="button" data-l="light">轻改</button>
+              <button type="button" data-l="standard" class="on">标准</button>
+              <button type="button" data-l="high">拔高</button>
+            </div>
+            <button class="mini-pill" id="slGo" type="button">转换</button>
+          </div>
+        </div>
+        <div class="demo-cell">
+          <div class="demo-label"><span class="num">2</span>申论表述</div>
+          <p id="slOut"><span class="placeholder">转换结果会出现在这里，蓝色标记处是改动。</span></p>
+          <div class="sl-marks" id="slMarks"></div>
+        </div>
+      </div>
+      <div class="demo-foot">
+        <span>试试这些：</span>
+        <div class="chips">
+          <button class="chip-sm" type="button" data-s="我觉得这事不能光靠政府，老百姓也得自觉。">政府与群众</button>
+          <button class="chip-sm" type="button" data-s="现在网上乱七八糟的东西太多了，没人管。">网络乱象</button>
+          <button class="chip-sm" type="button" data-s="说白了就是钱不够，人手也不够。">基层困难</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="center stack-sm reveal" style="--d:220ms">
+      <a class="tlink" href="app.html#shenlun">了解申论批改与范文库</a>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 时政 ================= -->
+<section class="sec sec--gray" id="shizheng">
+  <div class="sec-inner">
+    <div class="center">
+      <p class="eyebrow reveal">时政 · 每日素材</p>
+      <h2 class="display display--sm reveal" style="--d:60ms">每天十分钟，<br>攒够一年的论据。</h2>
+      <p class="lede reveal" style="--d:120ms">不追热搜，只留能写进文章的东西：一件事实、一句提法、一个可用角度。</p>
+    </div>
+
+    <div class="marquee reveal" style="--d:160ms">
+      <div class="marquee-track" id="marqueeTrack">
+        <div class="ncard">
+          <time>11 月 22 日 · 民生</time>
+          <h5>基层医疗服务能力提升行动持续推进</h5>
+          <p>县域医共体建设覆盖面扩大，重点补齐乡镇卫生院人才短板。</p>
+          <span class="tagline">可用角度：公共服务均等化</span>
+        </div>
+        <div class="ncard">
+          <time>11 月 21 日 · 治理</time>
+          <h5>多地推行「高效办成一件事」清单</h5>
+          <p>把跨部门事项合并办理，压减材料与跑动次数。</p>
+          <span class="tagline">可用角度：数字政府／减证便民</span>
+        </div>
+        <div class="ncard">
+          <time>11 月 20 日 · 经济</time>
+          <h5>中小企业数字化转型试点扩围</h5>
+          <p>以专项资金支持「小快轻准」方案，降低转型门槛。</p>
+          <span class="tagline">可用角度：营商环境／新质生产力</span>
+        </div>
+        <div class="ncard">
+          <time>11 月 19 日 · 文化</time>
+          <h5>公共文化场馆延时开放成常态</h5>
+          <p>夜间开放与错时服务，让文化资源更好触达上班族。</p>
+          <span class="tagline">可用角度：文化惠民</span>
+        </div>
+        <div class="ncard">
+          <time>11 月 18 日 · 生态</time>
+          <h5>重点流域横向生态补偿机制落地</h5>
+          <p>上下游签订协议，水质达标与资金拨付挂钩。</p>
+          <span class="tagline">可用角度：生态治理协同</span>
+        </div>
+        <div class="ncard">
+          <time>11 月 17 日 · 乡村</time>
+          <h5>乡村产业带头人培育计划启动</h5>
+          <p>三年内培育一批懂技术、会经营的返乡创业群体。</p>
+          <span class="tagline">可用角度：乡村振兴／人才下沉</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat reveal" style="--d:60ms"><b>32</b><span>类主题，覆盖申论高频命题方向</span></div>
+      <div class="stat reveal" style="--d:130ms"><b>8</b><span>条／天，通勤路上刷完</span></div>
+      <div class="stat reveal" style="--d:200ms"><b>1</b><span>键引用到作文素材本</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 面试 ================= -->
+<section class="sec sec--dark" id="mianshi">
+  <div class="sec-inner">
+    <div class="split split--rev">
+      <div class="reveal" style="--d:100ms">
+        <div class="wave" aria-hidden="true">
+          <i style="--h:34"></i><i style="--h:58"></i><i style="--h:42"></i><i style="--h:76"></i>
+          <i style="--h:52"></i><i style="--h:88"></i><i style="--h:64"></i><i style="--h:96"></i>
+          <i style="--h:46"></i><i style="--h:72"></i><i style="--h:38"></i><i style="--h:60"></i>
+          <i style="--h:82"></i><i style="--h:50"></i><i style="--h:68"></i><i style="--h:44"></i>
+          <i style="--h:74"></i><i style="--h:56"></i><i style="--h:90"></i><i style="--h:40"></i>
+          <i style="--h:62"></i><i style="--h:48"></i><i style="--h:78"></i><i style="--h:36"></i>
+        </div>
+        <div class="scard">
+          <div class="say">
+            <span>AI 追问 · 第 2 轮</span>
+            「你刚才说要加强监管，具体由谁来监管、用什么手段？如果涉及多个部门，怎么协同？」
+          </div>
+          <div class="score"><b>86<span>综合得分</span></b></div>
+        </div>
+      </div>
+
+      <div>
+        <p class="eyebrow reveal">面试 · AI 陪练</p>
+        <h2 class="display display--sm reveal" style="--d:60ms">先对着机器练，<br>再对着人说话。</h2>
+        <p class="copy reveal" style="--d:120ms">结构化面试全流程模拟：抽题、思考、作答、追问、计时，一个不落。回答完给两份反馈——<strong>内容分</strong>看要点是否踩中，<strong>表达分</strong>看语速、停顿、口头语。</p>
+        <ul class="feat-list">
+          <li class="reveal" style="--d:180ms"><span><b>六类题型全覆盖</b>综合分析、组织管理、人际关系、应急应变、情景模拟、自我认知。</span></li>
+          <li class="reveal" style="--d:230ms"><span><b>追问不放过套话</b>回答空泛时，AI 会顺着你的原话继续问，逼出具体措施。</span></li>
+          <li class="reveal" style="--d:280ms"><span><b>录音回放</b>回看自己的停顿和「嗯、那个」，比听十遍建议有用。</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 学习计划 ================= -->
+<section class="sec" id="plan">
+  <div class="sec-inner">
+    <div class="center">
+      <p class="eyebrow reveal">学习系统 · 进度</p>
+      <h2 class="display display--sm reveal" style="--d:60ms">打开就知道今天该做什么。</h2>
+      <p class="lede reveal" style="--d:120ms">把考试日期倒推成任务量，做不完自动顺延，不靠意志力硬撑。</p>
+    </div>
+
+    <div class="stat-row" style="margin-top:clamp(40px,6vw,64px)">
+      <div class="stat reveal" style="--d:60ms"><b>156</b><span>距考试天数，每天自动重排</span></div>
+      <div class="stat reveal" style="--d:130ms"><b>90<small>分钟</small></b><span>每日建议学习时长</span></div>
+      <div class="stat reveal" style="--d:200ms"><b>46<small>天</small></b><span>平均连续学习天数</span></div>
+    </div>
+
+    <div class="split" style="margin-top:clamp(48px,7vw,72px)">
+      <div class="reveal" style="--d:100ms">
+        <div class="qcard" style="background:#fff; border-color:rgba(0,0,0,.08); box-shadow:0 30px 60px -45px rgba(0,0,0,.5)">
+          <div class="qtop" style="margin-bottom:14px">
+            <span class="tag" style="background:rgba(0,113,227,.08); color:#0066cc">本周计划</span>
+            <span class="qno" style="color:var(--ink-3)">第 12 周 / 共 24 周</span>
+          </div>
+          <div class="task"><span class="dot" style="border-color:#d2d2d7"></span><span class="t" style="color:var(--ink)">行测 · 资料分析速算 3 组</span><span class="n" style="color:var(--ink-3)">60 分钟</span></div>
+          <div class="task"><span class="dot" style="border-color:#d2d2d7"></span><span class="t" style="color:var(--ink)">申论 · 提出对策 1 篇</span><span class="n" style="color:var(--ink-3)">40 分钟</span></div>
+          <div class="task"><span class="dot" style="border-color:#d2d2d7"></span><span class="t" style="color:var(--ink)">时政 · 本周 40 条</span><span class="n" style="color:var(--ink-3)">20 分钟</span></div>
+          <div class="task"><span class="dot" style="border-color:#d2d2d7"></span><span class="t" style="color:var(--ink)">面试 · 综合分析 2 题</span><span class="n" style="color:var(--ink-3)">30 分钟</span></div>
+          <div class="qnote" style="color:var(--ink-2); border-top-color:rgba(0,0,0,.07)">
+            <b style="color:var(--ink)">系统建议：</b>资料分析连续两次未达标，本周加到 3 组；申论对策题得分稳定，可减 1 篇，把时间让给行测。
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 class="display display--sm reveal" style="--d:60ms; font-size:clamp(26px,3.4vw,40px)">计划会变，<br>但不会断。</h3>
+        <p class="copy reveal" style="--d:120ms">某天只学了 20 分钟，系统不会判你「失败」，只把任务顺延并按剩余天数重新配比。长期看，<strong>连续性是唯一重要的指标</strong>。</p>
+        <ul class="feat-list" style="color:var(--ink-2)">
+          <li class="reveal" style="--d:180ms"><span><b>按掌握度调整</b>同一考点连续正确，题量自动下调。</span></li>
+          <li class="reveal" style="--d:230ms"><span><b>科目配比可改</b>偏科严重时，手动锁定某一模块的每日下限。</span></li>
+        </ul>
+        <div class="pill-row" style="justify-content:flex-start; margin-top:28px">
+          <a class="pill pill--ghost reveal" style="--d:260ms" href="app.html#today">看完整计划示例</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 定价 ================= -->
+<section class="sec sec--gray" id="pricing">
+  <div class="sec-inner">
+    <div class="center">
+      <p class="eyebrow reveal">价格与权益</p>
+      <h2 class="display display--sm reveal" style="--d:60ms">先免费用一周。</h2>
+      <p class="lede reveal" style="--d:120ms">不绑卡、不自动续费。用得下去再付费，用不下去就走。</p>
+    </div>
+
+    <div class="plans">
+      <div class="plan reveal" style="--d:60ms">
+        <h5>免费</h5>
+        <p class="desc">先看看这套系统合不合手</p>
+        <div class="price">¥0</div>
+        <div class="per">永久</div>
+        <ul>
+          <li>每日 30 道行测题</li>
+          <li>申论口语规范化工具</li>
+          <li>时政每日 8 条</li>
+          <li>7 天学习记录</li>
+        </ul>
+        <a class="pill pill--ghost" href="app.html#today">开始使用</a>
+      </div>
+
+      <div class="plan plan--hot reveal" style="--d:130ms">
+        <h5>系统班</h5>
+        <p class="desc">大部分人需要的都在这里</p>
+        <div class="price">¥399<small>/ 6 个月</small></div>
+        <div class="per">考期结束前可暂停一次</div>
+        <ul>
+          <li>全部 2.4 万题与错题归因</li>
+          <li>申论批改 12 篇 · 范文库</li>
+          <li>时政素材库全量</li>
+          <li>面试 AI 陪练 30 次</li>
+          <li>学习计划自动重排</li>
+        </ul>
+        <a class="pill pill--blue" href="app.html#today">购买系统班</a>
+      </div>
+
+      <div class="plan reveal" style="--d:200ms">
+        <h5>一对一</h5>
+        <p class="desc">申论需要人看、面试需要人评</p>
+        <div class="price">¥1,280<small>/ 6 个月</small></div>
+        <div class="per">含 4 次真人批改</div>
+        <ul>
+          <li>系统班全部权益</li>
+          <li>真人申论批改 4 篇</li>
+          <li>面试模考 2 次（含录像点评）</li>
+          <li>专属学习计划 1 次</li>
+        </ul>
+        <a class="pill pill--ghost" href="app.html#today">咨询一对一</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="sec cta-band">
+  <div class="sec-inner sec-inner--narrow">
+    <h2 class="display reveal">今天的 90 分钟，<br>决定 156 天后的分数。</h2>
+    <p class="lede reveal" style="--d:100ms">先做一套 20 题的小测，系统会告诉你从哪儿开始。</p>
+    <div class="pill-row reveal" style="--d:180ms">
+      <a class="pill pill--blue" href="app.html#today">开始免费试用</a>
+      <a class="pill pill--ghost" href="#demo">再看一次申论工具</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= Footer ================= -->
+<footer class="foot">
+  <div class="foot-inner">
+    <div class="foot-cols">
+      <div>
+        <h6 class="brand">考公学习系统</h6>
+        <p class="about">行测、申论、时政、面试，一条时间线跑完。为自学备考设计，不做押题，只做可执行的每一天。</p>
+      </div>
+      <div>
+        <h6>产品</h6>
+        <a href="app.html#xingce">行测智能刷题</a>
+        <a href="app.html#shenlun">申论批改</a>
+        <a href="app.html#shizheng">时政素材库</a>
+        <a href="app.html#mianshi">面试 AI 陪练</a>
+      </div>
+      <div>
+        <h6>学习</h6>
+        <a href="app.html#today">学习计划</a>
+        <a href="app.html#xingce">错题本</a>
+        <a href="#demo">口语规范化</a>
+        <a href="#pricing">价格</a>
+      </div>
+      <div>
+        <h6>关于</h6>
+        <a href="#top">使用说明</a>
+        <a href="#top">隐私说明</a>
+        <a href="#top">联系我们</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 考公学习系统 · 本站为演示页面，数据均为示例</span>
+      <nav>
+        <a href="#top">隐私政策</a>
+        <a href="#top">使用条款</a>
+        <a href="#top">站点地图</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/engine.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
