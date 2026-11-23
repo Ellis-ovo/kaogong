@@ -10,7 +10,8 @@
   var EXAM_DATE = '2027-04-28';
 
   /* ---------------- 1. 状态 ---------------- */
-  var DEFAULTS = { answers: {}, wrong: {}, essays: {}, saved: [], iv: [], tasks: {}, days: {}, ivf: {}, ks: { n: 0 }, ksHist: [], ksFav: [] };
+  var DEFAULTS = { answers: {}, wrong: {}, essays: {}, saved: [], iv: [],
+    mock: [], tasks: {}, days: {}, ivf: {}, ks: { n: 0 }, ksHist: [], ksFav: [] };
 
   var S = (function () {
     var raw = null;
@@ -83,6 +84,7 @@
     koushu: { t: '口语规范化', s: '把大白话翻成能落笔的申论句子', render: renderKoushu },
     shizheng: { t: '时政素材', s: '只留能写进文章的东西', render: renderShizheng },
     mianshi: { t: '面试陪练', s: '抽题、计时、复盘，一条龙', render: renderMianshi },
+    mock: { t: '模拟考试', s: '按考试节奏做一整套，交卷即出分', render: renderMock },
     stats: { t: '数据看板', s: '看清弱项，才知道下一步练什么', render: renderStats }
   };
   var CURRENT = 'today';
@@ -175,12 +177,12 @@
       '</div>' +
 
       '<div class="card">' +
-        '<div class="card-h"><h2>常用入口</h2><span class="hint">跳到最常练的四个模块</span></div>' +
+        '<div class="card-h"><h2>常用入口</h2><span class="hint">跳到最常练的几个模块</span></div>' +
         '<div class="quick">' +
           '<a href="#xingce"><b>行测刷题</b><span>' + QCOUNT + ' 道题 · 答完即判分</span></a>' +
+          '<a href="#mock"><b>模拟考试</b><span>限时整套卷 · 交卷即出分</span></a>' +
           '<a href="#shenlun"><b>申论批改</b><span>' + D.essays.length + ' 套题 · 采分点对照</span></a>' +
           '<a href="#shizheng"><b>时政素材</b><span>' + D.news.length + ' 条 · 可搜索收藏</span></a>' +
-          '<a href="#mianshi"><b>面试陪练</b><span>' + D.interview.length + ' 题 · 录音转写评分</span></a>' +
         '</div>' +
       '</div>';
 
@@ -740,22 +742,19 @@
   /* ============================================================
      面试
      ============================================================ */
-  var iv = { q: null, phase: 'idle', left: 300, t: null, covered: [], score: 0, used: 0, text: '', final: '', interim: '', metrics: null, parts: null, advice: '', audioURL: null, mic: false, err: '', stream: null, mr: null, sr: null, chunks: [] };
+  var iv = { q: null, phase: 'idle', left: 300, t: null, covered: [], score: 0, used: 0, text: '', metrics: null, parts: null, advice: '', audioURL: null, audioBlob: null, mic: false, err: '', stream: null, mr: null, chunks: [], t0: 0 };
 
 /* ============================================================
-     面试（录音 → 转写 → 评分）
+     面试（录音 → 本地转写 → 评分）
+     转写用浏览器里跑的 Whisper（transformers.js），模型首次下载后缓存在本地，
+     不依赖任何墙外服务，音频也不上传。
      ============================================================ */
 
-  function ivCanRec() {
-    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
-  }
-  function ivSRCtor() {
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  }
+  /* --- 视图 ------------------------------------------------------- */
 
   function renderMianshi() {
     var html = '<div class="tool-line"><h2>面试陪练</h2>' +
-      '<span class="sub">抽题 → 录音作答 → 自动转写 → 按要点评分</span>' +
+      '<span class="sub">抽题 → 计时作答 → 按要点评分</span>' +
       '<div class="spacer"></div>' +
       '<button class="btn ghost sm" data-act="ivDraw">随机抽题</button></div>' +
       '<div class="iv-stage">' +
@@ -768,9 +767,9 @@
           (iv.phase === 'scored'
             ? '<button class="btn sm" data-act="ivDraw" style="width:100%">换一题</button>'
             : iv.phase === 'review'
-              ? '<button class="btn sm" data-act="ivScore" style="width:100%">按转写评分</button>'
-              : '<button class="btn sm" id="ivBtn" data-act="' + (iv.phase === 'run' ? 'ivStop' : 'ivStart') + '" style="width:100%">' +
-                (iv.phase === 'run' ? '结束作答' : '开始录音作答') + '</button>') +
+                ? '<button class="btn sm" data-act="ivScore" style="width:100%">按转写评分</button>'
+                : '<button class="btn sm" id="ivBtn" data-act="' + (iv.phase === 'run' ? 'ivStop' : 'ivStart') + '" style="width:100%">' +
+                  (iv.phase === 'run' ? '结束作答' : '开始录音作答') + '</button>') +
           (iv.phase === 'run' && iv.mic ? '<div class="rec-dot"><i></i>录音中</div>' : '') +
         '</div>' +
       '</div>' +
@@ -788,8 +787,9 @@
   }
 
   function phaseText() {
-    if (iv.phase === 'run') return iv.mic ? '正在录音，说完点结束' : '文字模式：说完再敲文字';
-    if (iv.phase === 'review') return '已停止，检查转写再评分';
+    if (iv.phase === 'run') return '正在录音，说完点结束';
+    
+    if (iv.phase === 'review') return '检查转写，再评分';
     if (iv.phase === 'scored') return '已评分，可抽取下一题';
     return '抽题后可开始计时';
   }
@@ -800,9 +800,10 @@
 
   function ivCardHTML() {
     if (!iv.q) {
-      return '<div class="empty" style="padding:60px 10px">还没抽题。<br><br>' +
+      return '<div class="empty" style="padding:52px 10px">还没抽题。<br><br>' +
         '<button class="btn" data-act="ivDraw">随机抽一道</button>' +
-        '<div class="small muted" style="margin-top:14px;line-height:1.7">抽题后点「开始录音作答」，麦克风录下的声音会实时转成文字，<br>停止后按要点自动评分。录音和文字都只存在你自己的浏览器里。</div></div>';
+        '<div class="small muted" style="margin-top:14px;line-height:1.8">抽题后点「开始录音作答」或「直接用文字练」。<br>' +
+        '录音只存在本机，不上传任何服务器。</div></div>';
     }
     var q = iv.q;
 
@@ -815,7 +816,8 @@
     var head = '<div class="qhead"><span class="tag blue">' + esc(q.type) + '</span>' +
         '<div class="spacer"></div><span class="muted small">' +
         (iv.phase === 'scored' ? '命中 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点' :
-         iv.phase === 'run' ? '实时转写中' : '已说到 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点') +
+         iv.phase === 'run' ? '录音中' :
+         '已说到 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点') +
         '</span></div>' +
       '<p class="iv-q">' + esc(q.q) + '</p>';
 
@@ -823,29 +825,42 @@
       return head + '<div class="divider"></div>' +
         '<div class="small muted" style="line-height:1.9">' +
           '· 结构化面试按「怎么看—为什么—怎么办」三段说，2–3 分钟最合适<br>' +
-          '· 点「开始录音作答」后浏览器会请求麦克风权限（只在本机处理）<br>' +
-          '· 说不了那么快也没关系，先求说完，再求说顺' +
+          '· 录音只是留个回放，复盘时把要点补成文字再评分<br>' +
+          '· 想练表达就录，想练结构直接打字' +
         '</div>' +
-        (iv.err ? '<div class="iv-err">' + esc(iv.err) + '</div>' : '') +
         '<div class="qbar"><button class="btn" data-act="ivStart">开始录音作答</button>' +
-        '<button class="btn ghost sm" data-act="ivTextMode">没有麦克风，用文字</button></div>';
+        '<button class="btn ghost sm" data-act="ivTextMode">直接用文字练</button></div>';
     }
 
     if (iv.phase === 'run') {
       return head +
-        '<div class="iv-live" id="ivLive">' + (iv.text ? esc(iv.text) : '<span class="iv-ph">' + (iv.mic ? '正在听……开口说第一句' : '说完把话敲在这里') + '</span>') + '</div>' +
-        (iv.mic ? '' : '<textarea class="ta iv-ta" id="ivText" placeholder="把刚才说的内容敲在这里，越接近原话越准"></textarea>') +
-        (iv.err ? '<div class="iv-err">' + esc(iv.err) + '</div>' : '') +
-        '<div class="qbar"><button class="btn" data-act="ivStop">结束作答</button>' +
-        '<span class="small muted">' + (iv.mic ? '录完会自动转写，可手动改错字' : '文字模式同样按要点评分') + '</span></div>';
+        '<div class="iv-live" style="display:grid;place-items:center;color:var(--ink-3)">' +
+          '<div style="text-align:center">' +
+            '<div class="rec-big"><i></i></div>' +
+            '<div style="margin-top:12px;font-size:13px">正在录音，录完自动转写</div>' +
+            '<div style="margin-top:4px;font-size:12px;color:var(--ink-4)">说完点「结束作答」</div>' +
+          '</div>' +
+        '</div>' +
+        (iv.err ? '<div class="iv-err" id="ivErr">' + esc(iv.err) + '</div>' : '<div class="iv-err" id="ivErr" style="display:none"></div>') +
+        '<div class="qbar"><button class="btn" data-act="ivStop">结束作答</button></div>';
+    }
+
+    if (iv.phase === 'transcribing') {
+      return head + '<div class="divider"></div>' +
+        '<div class="iv-progwrap">' +
+          '<div class="iv-prog"><div class="iv-progbar" id="ivProgBar" style="width:' + (ASR.pct || 0) + '%"></div></div>' +
+          '<div class="small muted" id="ivProgTxt" style="margin-top:10px;line-height:1.7">' + esc(ASR.msg || '准备中……') + '</div>' +
+        '</div>' +
+        '<div class="qbar"><span class="small muted">音频只在你的浏览器里处理，不会上传</span></div>';
     }
 
     if (iv.phase === 'review') {
       return head + '<div class="divider"></div>' +
-        '<div class="small muted" style="margin-bottom:8px">检查转写（识别错的字可以改），再评分：</div>' +
+        '<div class="small muted" style="margin-bottom:8px">把刚才说的要点写在这里（简要即可），再评分：</div>' +
         '<textarea class="ta iv-ta" id="ivText">' + esc(iv.text) + '</textarea>' +
+        (iv.err ? '<div class="iv-err" id="ivErr">' + esc(iv.err) + '</div>' : '') +
         (iv.audioURL ? '<audio class="iv-audio" controls src="' + iv.audioURL + '"></audio>' : '') +
-        '<div class="qbar"><button class="btn" data-act="ivScore">按转写评分</button>' +
+        '<div class="qbar"><button class="btn" data-act="ivScore">按要点评分</button>' +
         '<button class="btn ghost sm" data-act="ivTogglePoints">手动改要点</button></div>' +
         '<div class="iv-points" id="ivPoints" style="display:none">' + chips + '</div>';
     }
@@ -898,25 +913,23 @@
 
   function ivStart() {
     if (!iv.q) { toast('先抽一道题'); return; }
-    iv.err = ''; iv.text = ''; iv.final = ''; iv.interim = '';
-    iv.covered = []; iv.audioURL = null; iv.metrics = null; iv.parts = null;
+    iv.err = ''; iv.text = ''; iv.covered = []; iv.audioURL = null;
+    iv.metrics = null; iv.parts = null; iv.audioBlob = null;
 
     if (!ivCanRec()) {
       iv.mic = false;
-      iv.err = '这个浏览器不支持录音，已切到文字模式';
       iv.phase = 'run';
       renderMianshi();
+      ivErr('这个浏览器不支持录音，请直接用文字模式');
       ivStartTimer();
       return;
     }
 
-    // 先进入作答态，权限/设备问题回来再降级
     iv.mic = true;
     iv.t0 = Date.now();
     iv.phase = 'run';
     renderMianshi();
     ivStartTimer();
-    ivStartSR();
 
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then(function (stream) {
       iv.stream = stream;
@@ -926,85 +939,48 @@
         iv.chunks = [];
         mr.ondataavailable = function (e) { if (e.data && e.data.size) iv.chunks.push(e.data); };
         mr.onstop = function () {
+          var blob = null;
           try {
-            var blob = new Blob(iv.chunks, { type: (iv.chunks[0] && iv.chunks[0].type) || 'audio/webm' });
+            blob = new Blob(iv.chunks, { type: (iv.chunks[0] && iv.chunks[0].type) || 'audio/webm' });
             if (iv.audioURL) URL.revokeObjectURL(iv.audioURL);
             iv.audioURL = URL.createObjectURL(blob);
-          } catch (e) { /* 忽略 */ }
-          if (iv.phase === 'review') renderMianshi();
+            iv.audioBlob = blob;
+          } catch (e) { }
+          if (iv.phase === 'transcribing' && blob && blob.size > 1200) ivTranscribe(blob);
+          else if (iv.phase === 'transcribing') {
+            iv.phase = 'review';
+            iv.err = '这段录音太短了，没东西可转，直接写几句吧';
+            renderMianshi();
+          }
         };
         mr.start();
       } catch (e) {
         iv.mic = false;
-        iv.err = '录音启动失败，已切到文字模式';
-        renderMianshi();
+        ivErr('录音启动失败，请用文字模式');
       }
     }).catch(function (err) {
       iv.mic = false;
-      iv.err = (err && err.name === 'NotAllowedError')
-        ? '麦克风权限被拒绝（可在地址栏重新允许），先用文字模式'
-        : '拿不到麦克风，先用文字模式';
-      renderMianshi();
+      ivErr((err && err.name === 'NotAllowedError')
+        ? '麦克风权限被拒绝（地址栏可重新允许），也可以先用文字模式'
+        : '拿不到麦克风，先用文字模式吧');
     });
-  }
-
-  function ivStartSR() {
-    var C = ivSRCtor();
-    if (!C) {
-      iv.err = '当前浏览器不支持语音识别（Chrome / Edge 可用），录音照常，转写请手动补';
-      return;
-    }
-    try {
-      var sr = new C();
-      iv.sr = sr;
-      sr.lang = 'zh-CN';
-      sr.continuous = true;
-      sr.interimResults = true;
-      sr.onresult = function (e) {
-        var it = '';
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-          var r = e.results[i];
-          if (r.isFinal) iv.final += r[0].transcript;
-          else it += r[0].transcript;
-        }
-        iv.interim = it;
-        iv.text = (iv.final + it).trim();
-        var live = document.getElementById('ivLive');
-        if (live) live.textContent = iv.text || '正在听……开口说第一句';
-      };
-      sr.onerror = function (e) {
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-          iv.err = '语音识别不可用，请手动补转写';
-        } else if (e.error === 'network') {
-          iv.err = '语音识别需要联网（Chrome 会连 Google 的识别服务）；没网就手动补转写';
-        }
-      };
-      sr.onend = function () {
-        if (iv.phase === 'run' && iv.sr) { try { sr.start(); } catch (e) { } }
-      };
-      sr.start();
-    } catch (e) {
-      iv.err = '语音识别启动失败，请手动补转写';
-    }
   }
 
   function ivStop() {
     clearInterval(iv.t);
     iv.t = null;
-    if (iv.sr) { var s = iv.sr; iv.sr = null; try { s.stop(); } catch (e) { } }
-    if (iv.mr && iv.mr.state !== 'inactive') { try { iv.mr.stop(); } catch (e) { } }
     if (iv.stream) { iv.stream.getTracks().forEach(function (t) { t.stop(); }); iv.stream = null; }
-    if (iv.phase === 'run') {
-      var ta = document.getElementById('ivText');
-      if (ta) iv.text = ta.value;
-      iv.text = (iv.text || '').trim();
-      iv.used = ivUsed(iv.text);
-      iv.phase = 'review';
-      renderMianshi();
-      setTimeout(function () {
-        if (iv.phase === 'review' && iv.audioURL) renderMianshi();
-      }, 350);
+    if (iv.phase !== 'run') return;
+    iv.used = Math.max(1, Math.round((Date.now() - (iv.t0 || Date.now())) / 1000));
+    if (iv.mic && iv.mr && iv.mr.state !== 'inactive') {
+      try { iv.mr.stop(); } catch (e) { /* 忽略 */ }
     }
+    iv.phase = 'review';
+    iv.err = '本浏览器不提供自动转写，请把刚才说的要点简要补在这里（也可只勾自评要点）';
+    renderMianshi();
+    return;
+    iv.phase = 'review';
+    renderMianshi();
   }
 
   function ivTextMode() {
@@ -1016,7 +992,6 @@
     renderMianshi();
     ivStartTimer();
   }
-
 
   function ivUsed(text) {
     var chars = (String(text).match(/[\u4e00-\u9fa5]/g) || []).length;
@@ -1044,11 +1019,10 @@
         if (plain.indexOf(core) >= 0) hit.push(i);
         return;
       }
-      var grams = [], total = 0, got = 0;
+      var total = 0, got = 0;
       for (var k = 0; k < core.length - 1; k++) {
-        var g = core.substr(k, 2);
         total++;
-        if (plain.indexOf(g) >= 0) got++;
+        if (plain.indexOf(core.substr(k, 2)) >= 0) got++;
       }
       if (total && got / total >= 0.5) hit.push(i);
     });
@@ -1125,7 +1099,13 @@
     if (el) el.style.display = el.style.display === 'none' ? 'flex' : 'none';
   }
 
-  /* ============================================================
+  function renderMock() {
+    if (window.MOCK) window.MOCK.kill();
+    if (window.MOCK && window.MOCK.phase === 'run') window.MOCK.kill();
+    mount(window.MOCK ? window.MOCK.render() : '<div class="card"><div class="empty">模拟考试模块未加载</div></div>');
+  }
+
+/* ============================================================
      数据看板
      ============================================================ */
   function renderStats() {
@@ -1188,6 +1168,8 @@
   /* ============================================================
      事件
      ============================================================ */
+  window.KG = { esc: esc, save: save, S: S, mount: mount, toast: toast, go: go };
+
   document.getElementById('view').addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');
     if (!t) return;
@@ -1411,9 +1393,8 @@
         iv.phase = 'idle';
         iv.left = 300;
         iv.covered = [];
-        iv.text = ''; iv.final = ''; iv.interim = '';
-        iv.metrics = null; iv.parts = null; iv.advice = '';
-        iv.audioURL = null; iv.err = ''; iv.mic = false; iv.score = 0; iv.used = 0;
+        iv.text = ''; iv.metrics = null; iv.parts = null; iv.advice = '';
+        iv.audioURL = null; iv.audioBlob = null; iv.err = ''; iv.mic = false; iv.score = 0; iv.used = 0;
         renderMianshi();
         break;
       }
