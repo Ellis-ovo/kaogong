@@ -395,3 +395,95 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
   border-bottom:1px solid #efd68b; cursor:help;
 }
 #ansBox::placeholder,#slIn::placeholder{color:#a9a9b0}
+
+/* ============================================================
+   口语规范化（核心功能）
+   ============================================================ */
+.nav-link .tag{
+  margin-left:auto; font-style:normal; font-size:10px; line-height:1;
+  padding:3px 6px; border-radius:6px; background:#fff0f0; color:#c9372c;
+  font-weight:600; letter-spacing:.02em;
+}
+.core-tag{
+  font-size:11px; padding:4px 9px; border-radius:999px;
+  background:#fff0f0; color:#c9372c; font-weight:600;
+}
+.ks-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; align-items:start}
+#ksIn{
+  width:100%; min-height:158px; padding:13px 14px; border-radius:12px;
+  border:1px solid var(--line-2); background:#fff; resize:vertical;
+  font-family:var(--serif); font-size:15px; line-height:1.85; color:var(--ink); outline:none;
+  transition:border-color .16s, box-shadow .16s;
+}
+#ksIn:focus{border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,113,227,.1)}
+#ksIn::placeholder{color:#a9a9b0}
+.ks-chips{display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 0}
+.ks-ctrl{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px}
+.ks-lab{font-size:11.5px; color:var(--ink-3); letter-spacing:.02em}
+.ks-out{
+  font-family:var(--serif); font-size:15.5px; line-height:1.95; color:var(--ink);
+  padding:14px 16px; border-radius:12px; background:#fffdf8; border:1px solid var(--line);
+  min-height:120px;
+}
+.ks-out mark{
+  background:#fff2c9; color:inherit; border-radius:3px; padding:0 1px;
+  border-bottom:1px solid #efd68b; cursor:help;
+}
+.ks-empty{color:#a9a9b0; font-size:13.5px; font-family:var(--font)}
+.ks-marks, .ks-terms{margin-top:12px}
+.ks-mklist{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+.ks-marks .mk{
+  font-size:11.5px; color:var(--ink-2); background:#f6f6f8; border:1px solid var(--line);
+  padding:3px 8px; border-radius:7px;
+}
+.ks-marks .mk em{font-style:normal; color:var(--ink-3); text-decoration:line-through}
+.ks-terms .term{
+  font-size:11.5px; color:#0062c4; background:var(--blue-bg); border:1px solid #d8e6fb;
+  padding:3px 8px; border-radius:7px;
+}
+.ks-pats{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px}
+.ks-pat{
+  display:flex; flex-direction:column; gap:5px; text-align:left;
+  padding:12px 13px; border-radius:11px; border:1px solid var(--line);
+  background:#fff; transition:border-color .15s, background .15s;
+}
+.ks-pat:hover{border-color:#c9d9f2; background:#fbfcff}
+.ks-pat span{font-family:var(--serif); font-size:13.5px; line-height:1.75; color:var(--ink)}
+.ks-pat em{font-style:normal; font-size:11px; color:var(--ink-3)}
+.ks-hist{display:flex; flex-direction:column; gap:2px}
+.ks-hitem{
+  display:flex; flex-direction:column; gap:3px; text-align:left;
+  padding:10px 6px; border-radius:9px; border-bottom:1px solid var(--line);
+}
+.ks-hitem:hover{background:#fafafc}
+.ks-hitem .src{font-size:12.5px; color:var(--ink-3)}
+.ks-hitem .dst{font-family:var(--serif); font-size:13.5px; color:var(--ink-2)}
+.ks-favs{display:flex; flex-direction:column; gap:8px}
+.ks-fav{
+  display:flex; align-items:center; gap:8px; padding:10px 12px;
+  border-radius:11px; border:1px solid var(--line); background:#fffdf8;
+}
+.ks-fav span{flex:1; font-family:var(--serif); font-size:13.5px; line-height:1.8; color:var(--ink)}
+
+@media (max-width:980px){
+  .ks-grid{grid-template-columns:minmax(0,1fr)}
+  .ks-pats{grid-template-columns:minmax(0,1fr)}
+  .nav-link .tag{display:none}
+}
+
+/* 资料分析共用材料 */
+.matbox{
+  margin:2px 0 14px; padding:13px 15px; border-radius:11px;
+  background:#fbfaf6; border:1px solid var(--line);
+  font-family:var(--serif); font-size:13.5px; line-height:1.9; color:var(--ink-2);
+}
+
+/* 示例芯片（口语规范化） */
+.ks-chips .chip{
+  max-width:100%; padding:6px 11px; border-radius:999px;
+  background:#fff; border:1px solid var(--line-2);
+  font-size:12px; color:var(--ink-2); line-height:1.3;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:border-color .15s, color .15s;
+}
+.ks-chips .chip:hover{border-color:var(--blue); color:#0062c4}
