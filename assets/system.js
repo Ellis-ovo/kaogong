@@ -10,7 +10,7 @@
   var EXAM_DATE = '2027-04-28';
 
   /* ---------------- 1. 状态 ---------------- */
-  var DEFAULTS = { answers: {}, wrong: {}, essays: {}, saved: [], iv: [], tasks: {}, days: {}, ivf: {} };
+  var DEFAULTS = { answers: {}, wrong: {}, essays: {}, saved: [], iv: [], tasks: {}, days: {}, ivf: {}, ks: { n: 0 }, ksHist: [], ksFav: [] };
 
   var S = (function () {
     var raw = null;
@@ -80,6 +80,7 @@
     today: { t: '今日', s: '今天该做什么，一次讲清', render: renderToday },
     xingce: { t: '行测刷题', s: '答完即判分，错题自动归因', render: renderXingce },
     shenlun: { t: '申论批改', s: '按采分点逐条对照，不是笼统给分', render: renderShenlun },
+    koushu: { t: '口语规范化', s: '把大白话翻成能落笔的申论句子', render: renderKoushu },
     shizheng: { t: '时政素材', s: '只留能写进文章的东西', render: renderShizheng },
     mianshi: { t: '面试陪练', s: '抽题、计时、复盘，一条龙', render: renderMianshi },
     stats: { t: '数据看板', s: '看清弱项，才知道下一步练什么', render: renderStats }
@@ -176,7 +177,7 @@
       '<div class="card">' +
         '<div class="card-h"><h2>常用入口</h2><span class="hint">跳到最常练的四个模块</span></div>' +
         '<div class="quick">' +
-          '<a href="#xingce"><b>行测刷题</b><span>' + D.questions.length + ' 道题 · 答完即判分</span></a>' +
+          '<a href="#xingce"><b>行测刷题</b><span>' + QCOUNT + ' 道题 · 答完即判分</span></a>' +
           '<a href="#shenlun"><b>申论批改</b><span>' + D.essays.length + ' 套题 · 采分点对照</span></a>' +
           '<a href="#shizheng"><b>时政素材</b><span>' + D.news.length + ' 条 · 可搜索收藏</span></a>' +
           '<a href="#mianshi"><b>面试陪练</b><span>' + D.interview.length + ' 题 · 计时作答</span></a>' +
@@ -224,13 +225,18 @@
   var xc = { mod: '全部', i: 0, picked: -1, graded: false, tab: 'practice', attrib: null };
 
   function xcList() {
-    return xc.mod === '全部' ? D.questions : D.questions.filter(function (q) { return q.mod === xc.mod; });
+    var pool = D.questions.filter(function (q) { return q.opts && q.opts.length >= 2 && q.ans >= 0; });
+    return xc.mod === '全部' ? pool : pool.filter(function (q) { return q.mod === xc.mod; });
   }
+
+  var MATS = {};
+  D.questions.forEach(function (q) { if (q.material) MATS[q.id] = q.stem.replace(/^【材料】/, ''); });
+  var QCOUNT = D.questions.filter(function (q) { return q.opts && q.opts.length >= 2; }).length;
 
   function renderXingce() {
     var html = '<div class="tool-line">' +
       '<h2>行测刷题</h2>' +
-      '<span class="sub">共 ' + D.questions.length + ' 道 · 已做 ' + Object.keys(S.answers).length + ' 道</span>' +
+      '<span class="sub">共 ' + QCOUNT + ' 道 · 已做 ' + Object.keys(S.answers).length + ' 道</span>' +
       '<div class="spacer"></div>' +
       '<div class="seg">' +
         '<button class="' + (xc.tab === 'practice' ? 'on' : '') + '" data-act="xctab" data-t="practice">练习</button>' +
@@ -290,6 +296,7 @@
 
     mount(html +
       '<div class="card">' + qh +
+        (q.mat && MATS[q.mat] ? '<div class="matbox">' + esc(MATS[q.mat]) + '</div>' : '') +
         '<p class="qstem">' + esc(q.stem) + '</p>' +
         '<div class="opts2">' + opts + '</div>' +
         after +
@@ -383,9 +390,16 @@
       '<h2>申论批改</h2>' +
       '<span class="sub">先自己写，再看采分点</span>' +
       '<div class="spacer"></div>' +
-      '<div class="seg">' + D.essays.map(function (x) {
-        return '<button class="' + (x.id === e.id ? 'on' : '') + '" data-act="essaySel" data-id="' + x.id + '">' + esc(x.type) + '</button>';
-      }).join('') + '</div>' +
+      '<div class="seg">' + (function () {
+        var seen = {};
+        D.essays.forEach(function (x) { seen[x.type] = (seen[x.type] || 0) + 1; });
+        var idx = {};
+        return D.essays.map(function (x) {
+          idx[x.type] = (idx[x.type] || 0) + 1;
+          var label = x.type + (seen[x.type] > 1 ? ' ' + idx[x.type] : '');
+          return '<button class="' + (x.id === e.id ? 'on' : '') + '" data-act="essaySel" data-id="' + x.id + '">' + esc(label) + '</button>';
+        }).join('');
+      })() + '</div>' +
     '</div>' +
 
     '<div class="essay-grid">' +
@@ -410,7 +424,7 @@
     '</div>' +
 
     '<div class="card">' +
-      '<div class="card-h"><h2>顺便用一下：口语规范化</h2><span class="hint">把大白话改成能落笔的句子</span></div>' +
+      '<div class="card-h"><h2>顺便用一下：口语规范化</h2><span class="hint">把大白话改成能落笔的句子</span><div class="right"><a class="btn ghost sm" href="#koushu">打开完整版 ›</a></div></div>' +
       '<textarea id="slIn" placeholder="例：我觉得有些干部就是不下基层，坐在办公室里拍脑袋决策。" style="width:100%;min-height:84px;padding:12px;border-radius:11px;border:1px solid var(--line-2);font-family:var(--serif);font-size:15px;line-height:1.8;outline:none;resize:vertical"></textarea>' +
       '<div class="essay-foot"><span class="small muted">本地规则引擎 · 词库 ' + (window.SL ? window.SL.dictSize : 0) + ' 条</span>' +
         '<div class="spacer"></div><button class="btn sm" data-act="slRun">转成申论句</button></div>' +
@@ -503,6 +517,172 @@
       box.innerHTML = essayResultHTML(r);
     }
     refreshSide();
+  }
+
+  /* ============================================================
+     口语规范化（核心功能）
+     ============================================================ */
+  var KLEVELS = [['light', '轻改'], ['standard', '标准'], ['high', '拔高']];
+  var KSCENES = [['auto', '自动'], ['problem', '问题'], ['cause', '原因'], ['measure', '对策'], ['meaning', '意义']];
+  var KCATS = ['开头', '问题', '原因', '对策', '意义', '结尾'];
+  var KEXAMPLES = [
+    '我觉得现在有些干部就是不下基层，坐在办公室里拍脑袋决策。',
+    '这事不能光靠政府，老百姓自己也得上心。',
+    '政策挺好，就是落实的时候老走样，到下面就变味了。',
+    '说白了，钱没花在刀刃上，该投的地方没投。'
+  ];
+  var ks = { level: 'standard', scene: 'auto', cat: '开头', out: null, text: '' };
+
+  function ksSeg(list, cur, act) {
+    return '<div class="seg">' + list.map(function (x) {
+      return '<button class="' + (x[0] === cur ? 'on' : '') + '" data-act="' + act + '" data-v="' + x[0] + '">' + x[1] + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function ksPatterns() { return D.patterns || []; }
+
+  function ksPatternHTML() {
+    var ps = ksPatterns();
+    if (!ps.length) return '';
+    var list = ps.filter(function (p) { return p.cat === ks.cat; });
+    return '<div class="card">' +
+      '<div class="card-h"><h2>句式模板</h2><span class="hint">点一下复制走，套上材料就能用</span></div>' +
+      '<div class="seg" style="margin-bottom:14px">' + KCATS.map(function (c) {
+        return '<button class="' + (c === ks.cat ? 'on' : '') + '" data-act="ksCat" data-v="' + c + '">' + c + '</button>';
+      }).join('') + '</div>' +
+      '<div class="ks-pats">' + list.map(function (p, i) {
+        return '<button class="ks-pat" data-act="ksPat" data-i="' + i + '">' +
+          '<span>' + esc(p.text) + '</span><em>' + esc(p.note) + '</em></button>';
+      }).join('') + '</div>' +
+    '</div>';
+  }
+
+  function ksHistHTML() {
+    var h = S.ksHist || [];
+    if (!h.length) return '';
+    return '<div class="card">' +
+      '<div class="card-h"><h2>最近转换</h2><span class="hint">点一条可以放回左边再改</span>' +
+        '<div class="right"><button class="btn ghost sm" data-act="ksHistClear">清空</button></div></div>' +
+      '<div class="ks-hist">' + h.slice(0, 6).map(function (x, i) {
+        return '<button class="ks-hitem" data-act="ksHist" data-i="' + i + '">' +
+          '<span class="src">' + esc(x.src) + '</span>' +
+          '<span class="dst">' + esc(x.out) + '</span></button>';
+      }).join('') + '</div>' +
+    '</div>';
+  }
+
+  function ksFavHTML() {
+    var f = S.ksFav || [];
+    if (!f.length) return '';
+    return '<div class="card">' +
+      '<div class="card-h"><h2>我的句子</h2><span class="hint">收藏 ' + f.length + ' 句</span></div>' +
+      '<div class="ks-favs">' + f.map(function (s, i) {
+        return '<div class="ks-fav"><span>' + esc(s) + '</span>' +
+          '<button class="btn ghost sm" data-act="ksFavCopy" data-i="' + i + '">复制</button>' +
+          '<button class="btn ghost sm" data-act="ksFavDel" data-i="' + i + '">删</button></div>';
+      }).join('') + '</div>' +
+    '</div>';
+  }
+
+  function renderKoushu() {
+    var html = '<div class="tool-line">' +
+        '<h2>口语规范化</h2>' +
+        '<span class="sub">一句大白话，翻成能落笔的申论句子</span>' +
+        '<div class="spacer"></div>' +
+        '<span class="core-tag">核心功能</span>' +
+      '</div>' +
+
+      '<div class="ks-grid">' +
+        '<div class="card">' +
+          '<div class="card-h"><h2>你的原话</h2><span class="hint" id="ksCount">0 字</span></div>' +
+          '<textarea id="ksIn" placeholder="例：我觉得有些干部就是不下基层，坐在办公室里拍脑袋决策。"></textarea>' +
+          '<div class="ks-chips">' + KEXAMPLES.map(function (s, i) {
+            return '<button class="chip" data-act="ksExample" data-i="' + i + '">' + esc(s.slice(0, 10)) + '…</button>';
+          }).join('') + '</div>' +
+          '<div class="ks-ctrl">' +
+            '<span class="ks-lab">力度</span>' + ksSeg(KLEVELS, ks.level, 'ksLevel') +
+            '<span class="ks-lab">场景</span>' + ksSeg(KSCENES, ks.scene, 'ksScene') +
+          '</div>' +
+          '<div class="essay-foot">' +
+            '<button class="btn ghost sm" data-act="ksClear">清空</button>' +
+            '<div class="spacer"></div>' +
+            '<button class="btn" data-act="ksRun">转成申论句</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="card">' +
+          '<div class="card-h"><h2>申论表述</h2><span class="hint" id="ksMeta">黄底为改动处，悬停看原文</span></div>' +
+          '<div id="ksOut" class="ks-out"><div class="ks-empty">左边写一句大白话，这里出规范句。</div></div>' +
+          '<div id="ksMarks" class="ks-marks"></div>' +
+          '<div id="ksTerms" class="ks-terms"></div>' +
+          '<div class="essay-foot">' +
+            '<span class="small muted" id="ksDict">本地规则引擎 · 词库 ' + (window.SL ? window.SL.dictSize : 0) + ' 条</span>' +
+            '<div class="spacer"></div>' +
+            '<button class="btn ghost sm" data-act="ksFav">收藏这句</button>' +
+            '<button class="btn ghost sm" data-act="ksCopy">复制</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      ksPatternHTML() + ksHistHTML() + ksFavHTML();
+
+    mount(html);
+
+    var box = document.getElementById('ksIn');
+    if (box) {
+      box.value = ks.text || '';
+      box.addEventListener('input', function () {
+        ks.text = box.value;
+        var el = document.getElementById('ksCount');
+        if (el) el.textContent = box.value.replace(/\s/g, '').length + ' 字';
+      });
+      var c0 = document.getElementById('ksCount');
+      if (c0) c0.textContent = (ks.text || '').replace(/\s/g, '').length + ' 字';
+    }
+    if (ks.out) ksPaint();
+  }
+
+  function ksPaint() {
+    var r = ks.out;
+    var out = document.getElementById('ksOut');
+    if (!r || !out) return;
+    out.innerHTML = window.SL.toHTML(r.text, r.marks);
+
+    var meta = document.getElementById('ksMeta');
+    if (meta) { var sn = { auto: '自动', problem: '问题', cause: '原因', measure: '对策', meaning: '意义', mixed: '综合' }; meta.textContent = '主题 ' + r.topic + ' · 场景 ' + (sn[r.scene] || r.scene || '自动'); }
+
+    var mb = document.getElementById('ksMarks');
+    if (mb) {
+      var chips = (r.marks || []).filter(function (m) { return !m.del && m.from && m.to; }).map(function (m) {
+        return '<span class="mk"><em>' + esc(m.from) + '</em>→' + esc(m.to) + '</span>';
+      });
+      mb.innerHTML = chips.length
+        ? '<span class="ks-lab">改动对照</span><div class="ks-mklist">' + chips.join('') + '</div>' : '';
+    }
+
+    var tb = document.getElementById('ksTerms');
+    if (tb) {
+      var terms = r.terms || [];
+      tb.innerHTML = terms.length
+        ? '<span class="ks-lab">可点缀术语</span><div class="ks-mklist">' +
+          terms.map(function (t) { return '<span class="term">' + esc(t) + '</span>'; }).join('') + '</div>' : '';
+    }
+  }
+
+  function ksRun() {
+    if (!window.SL) { toast('规则引擎未加载'); return; }
+    var src = (ks.text || '').replace(/\s+$/, '');
+    if (!src) { toast('先写一句大白话'); return; }
+    var r = window.SL.convert(src, { level: ks.level, scene: ks.scene });
+    if (!r) { toast('这句没转换出结果，换一种说法试试'); return; }
+    ks.out = r;
+    S.ksHist = S.ksHist || [];
+    S.ksHist.unshift({ src: src, out: r.text, level: ks.level, scene: r.scene, t: Date.now() });
+    S.ksHist = S.ksHist.slice(0, 12);
+    S.ks.n = (S.ks.n || 0) + 1;
+    save();
+    renderKoushu();
+    toast('已转换 · 累计第 ' + S.ks.n + ' 句');
   }
 
   /* ============================================================
@@ -723,6 +903,7 @@
 
       '<div class="card"><div class="card-h"><h2>练习分布</h2></div>' +
         row('申论批改', Object.keys(S.essays).length + ' 篇') +
+        row('口语改写', (S.ks && S.ks.n ? S.ks.n : 0) + ' 句') +
         row('面试练习', S.iv.length + ' 次') +
         row('时政收藏', S.saved.length + ' 条') +
         row('错题待清', Object.keys(S.wrong).length + ' 道') +
@@ -850,6 +1031,84 @@
           '<span class="hint">黄底为改动处，鼠标悬停看原文</span></div>' +
           '<div class="essay-out">' + window.SL.toHTML(r.text, r.marks) + '</div>' +
           '<div class="small muted" style="margin-top:6px">主题判断：' + esc(r.topic) + ' · 场景：' + esc(r.scene) + '</div>';
+        break;
+      }
+
+      /* --- 口语规范化 --- */
+      case 'ksLevel':
+      case 'ksScene': {
+        var v = t.getAttribute('data-v');
+        if (act === 'ksLevel') ks.level = v; else ks.scene = v;
+        renderKoushu();
+        break;
+      }
+      case 'ksExample':
+        ks.text = KEXAMPLES[+t.getAttribute('data-i')] || '';
+        renderKoushu();
+        break;
+      case 'ksRun':
+        ksRun();
+        break;
+      case 'ksClear':
+        ks.text = ''; ks.out = null;
+        renderKoushu();
+        break;
+      case 'ksCopy': {
+        if (!ks.out) { toast('先生成一句'); break; }
+        var txt = window.SL.toPlain ? window.SL.toPlain(ks.out.text, ks.out.marks) : ks.out.text;
+        if (navigator.clipboard) navigator.clipboard.writeText(txt);
+        toast('已复制');
+        break;
+      }
+      case 'ksFav': {
+        if (!ks.out) { toast('先生成一句'); break; }
+        var ft = window.SL.toPlain ? window.SL.toPlain(ks.out.text, ks.out.marks) : ks.out.text;
+        S.ksFav = S.ksFav || [];
+        if (S.ksFav.indexOf(ft) >= 0) { toast('已经收藏过这句'); break; }
+        S.ksFav.unshift(ft);
+        S.ksFav = S.ksFav.slice(0, 50);
+        save();
+        renderKoushu();
+        toast('已收进「我的句子」');
+        break;
+      }
+      case 'ksCat':
+        ks.cat = t.getAttribute('data-v');
+        renderKoushu();
+        break;
+      case 'ksPat': {
+        var pl = ksPatterns().filter(function (p) { return p.cat === ks.cat; });
+        var pat = pl[+t.getAttribute('data-i')];
+        if (!pat) break;
+        if (navigator.clipboard) navigator.clipboard.writeText(pat.text);
+        toast('句式已复制');
+        break;
+      }
+      case 'ksHist': {
+        var hh = (S.ksHist || [])[+t.getAttribute('data-i')];
+        if (!hh) break;
+        ks.text = hh.src;
+        ks.level = hh.level || 'standard';
+        renderKoushu();
+        toast('已放回左边，可改完再转');
+        break;
+      }
+      case 'ksHistClear':
+        S.ksHist = [];
+        save();
+        renderKoushu();
+        break;
+      case 'ksFavDel': {
+        var fi = +t.getAttribute('data-i');
+        S.ksFav.splice(fi, 1);
+        save();
+        renderKoushu();
+        break;
+      }
+      case 'ksFavCopy': {
+        var s2 = (S.ksFav || [])[+t.getAttribute('data-i')];
+        if (s2 && navigator.clipboard) navigator.clipboard.writeText(s2);
+        toast('已复制');
         break;
       }
 
