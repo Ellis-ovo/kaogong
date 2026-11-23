@@ -1,5 +1,8 @@
 # 考公学习系统
 
+在线地址：**https://yang123cg.github.io/kaogong-study/**
+（GitHub Pages 托管，`main` 分支根目录；改完推上去，一两分钟后自动生效）
+
 两个页面，一套东西：
 
 - `index.html` —— 产品介绍页（纵向全屏分栏，白/浅灰/黑三档底色 + 苹果蓝）
