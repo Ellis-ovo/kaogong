@@ -1,7 +1,7 @@
 # 考公学习系统
 
-在线地址：**https://yang123cg.github.io/kaogong/**
-（GitHub Pages 托管，`main` 分支根目录；改完推上去，一两分钟后自动生效。仓库：`yang123cg/kaogong`）
+在线地址：**https://ellis-ovo.github.io/kaogong/**
+（GitHub Pages 托管，`main` 分支根目录；改完推上去，一两分钟后自动生效。仓库：`Ellis-ovo/kaogong`）
 
 两个页面，一套东西：
 
