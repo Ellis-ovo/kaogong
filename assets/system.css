@@ -517,3 +517,75 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
   .iv-stage{grid-template-columns:1fr}
   .grade-rows{grid-template-columns:1fr}
 }
+
+/* ---------- 面试：录音 / 本地转写 ---------- */
+.rec-big{width:64px;height:64px;border-radius:50%;border:2px solid #f1d4d4;display:grid;place-items:center;margin:0 auto}
+.rec-big i{width:26px;height:26px;border-radius:6px;background:var(--red);display:block;animation:recpulse 1.2s ease-in-out infinite}
+@keyframes recpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.85);opacity:.55}}
+.iv-progwrap{margin:6px 0 4px}
+.iv-prog{height:8px;border-radius:99px;background:#eef0f3;overflow:hidden}
+.iv-progbar{height:100%;width:0;border-radius:99px;background:var(--blue);transition:width .35s ease}
+
+/* ================= 模拟考试 ================= */
+.mk-grid{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:16px; align-items:start; margin-bottom:16px}
+.mk-modes{display:grid; gap:10px}
+.mk-mode{display:grid; gap:3px; text-align:left; padding:14px 16px; border-radius:12px;
+  border:1px solid var(--line); background:#fff; cursor:pointer; transition:.16s; font:inherit}
+.mk-mode:hover{border-color:#c9d9f2; background:#fbfcff}
+.mk-mode.on{border-color:var(--blue); box-shadow:0 0 0 3px rgba(0,113,227,.10)}
+.mk-mode b{font-size:14px; color:var(--ink)}
+.mk-mode span{font-size:12.5px; color:var(--ink-2); line-height:1.55}
+.mk-mode em{font-style:normal; font-size:11.5px; color:var(--blue)}
+.mk-one{margin-top:14px}
+.mk-start{display:flex; align-items:center; gap:14px; margin-top:18px}
+.mk-hist{display:grid; gap:2px}
+.mk-hrow{display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line)}
+.mk-hrow:last-child{border-bottom:0}
+.mk-hrow .sc{width:42px; height:42px; border-radius:11px; display:grid; place-items:center; font-size:16px; font-weight:600}
+.mk-hrow .sc.hi{background:var(--green-bg); color:var(--green)}
+.mk-hrow .sc.mid{background:#fff6e5; color:#a6700f}
+.mk-hrow .sc.lo{background:var(--red-bg); color:var(--red)}
+.mk-hrow .txt{font-size:12.5px; color:var(--ink-2); line-height:1.6}
+.mk-hrow .txt b{color:var(--ink); font-size:13px}
+
+.mk-run{display:grid; grid-template-columns:minmax(0,1fr) 240px; gap:16px; align-items:start}
+.mk-top{display:flex; align-items:center; gap:8px; margin-bottom:14px}
+.mk-counter{font-size:12.5px; color:var(--ink-3); margin-right:12px}
+.mk-timer{font-variant-numeric:tabular-nums; font-size:17px; font-weight:600; color:var(--ink);
+  background:#f0f2f6; padding:4px 12px; border-radius:9px}
+.mk-timer.warn{background:var(--red-bg); color:var(--red)}
+.mk-nos{display:grid; grid-template-columns:repeat(5,1fr); gap:6px}
+.mk-no{height:30px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink-2);
+  font-size:12px; cursor:pointer; font-variant-numeric:tabular-nums}
+.mk-no:hover{border-color:#c9d9f2}
+.mk-no.done{background:#eef4ff; border-color:#c9d9f2; color:var(--blue)}
+.mk-no.cur{background:var(--blue); border-color:var(--blue); color:#fff}
+
+.mk-result{display:grid; grid-template-columns:220px minmax(0,1fr); gap:16px; align-items:start; margin-bottom:16px}
+.mk-score .sc{width:88px; height:88px; border-radius:20px; display:grid; place-items:center;
+  font-size:30px; font-weight:600; margin:4px 0 8px}
+.mk-score .sc.hi{background:var(--green-bg); color:var(--green)}
+.mk-score .sc.mid{background:#fff6e5; color:#a6700f}
+.mk-score .sc.lo{background:var(--red-bg); color:var(--red)}
+.mk-score .kv{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-2); padding:4px 0}
+.mk-score .kv b{color:var(--ink)}
+.mk-wrong{padding:14px 0; border-bottom:1px solid var(--line)}
+.mk-wrong:last-child{border-bottom:0}
+.mk-wrong .qh{display:flex; gap:8px; align-items:center; margin-bottom:6px}
+.mk-wrong .stmt{font-size:13.5px; line-height:1.75; color:var(--ink); margin-bottom:8px}
+.mk-wrong .ansline{display:flex; gap:14px; font-size:12.5px; margin-bottom:8px}
+.mk-wrong .bad{color:var(--red)}
+.mk-wrong .good{color:var(--green)}
+.mk-wrong .exp{font-size:12.5px; line-height:1.8; color:var(--ink-2); background:#fafbfd;
+  border:1px solid var(--line); border-radius:9px; padding:10px 12px}
+.mk-wrong .exp b{display:block; color:var(--ink); font-size:12px; margin-bottom:3px}
+
+@media (max-width:1180px){
+  .mk-run{grid-template-columns:minmax(0,1fr)}
+  .mk-sheet{order:-1}
+  .mk-nos{grid-template-columns:repeat(10,1fr)}
+}
+@media (max-width:760px){
+  .mk-grid,.mk-result{grid-template-columns:minmax(0,1fr)}
+  .mk-nos{grid-template-columns:repeat(6,1fr)}
+}
