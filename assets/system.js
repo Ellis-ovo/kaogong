@@ -11,7 +11,7 @@
 
   /* ---------------- 1. 状态 ---------------- */
   var DEFAULTS = { answers: {}, wrong: {}, essays: {}, saved: [], iv: [],
-    mock: [], tasks: {}, days: {}, ivf: {}, ks: { n: 0 }, ksHist: [], ksFav: [] };
+    mock: [], papers: [], tasks: {}, days: {}, ivf: {}, ks: { n: 0 }, ksHist: [], ksFav: [] };
 
   var S = (function () {
     var raw = null;
@@ -787,7 +787,7 @@
   }
 
   function phaseText() {
-    if (iv.phase === 'run') return '正在录音，说完点结束';
+    if (iv.phase === 'run') return iv.mic ? '正在录音，说完点结束' : '计时中，写完点按要点评分';
     
     if (iv.phase === 'review') return '检查转写，再评分';
     if (iv.phase === 'scored') return '已评分，可抽取下一题';
@@ -816,7 +816,7 @@
     var head = '<div class="qhead"><span class="tag blue">' + esc(q.type) + '</span>' +
         '<div class="spacer"></div><span class="muted small">' +
         (iv.phase === 'scored' ? '命中 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点' :
-         iv.phase === 'run' ? '录音中' :
+         iv.phase === 'run' ? (iv.mic ? '录音中' : '作答中') :
          '已说到 ' + iv.covered.length + ' / ' + q.points.length + ' 个要点') +
         '</span></div>' +
       '<p class="iv-q">' + esc(q.q) + '</p>';
@@ -833,25 +833,24 @@
     }
 
     if (iv.phase === 'run') {
+      if (!iv.mic) {
+        return head + '<div class="divider"></div>' +
+          '<div class="small muted" style="margin-bottom:8px">边想边写要点，写完点「按要点评分」：</div>' +
+          '<textarea class="ta iv-ta" id="ivText" placeholder="第一…第二…最后…">' + esc(iv.text) + '</textarea>' +
+          '<div class="qbar"><button class="btn" data-act="ivScore">按要点评分</button>' +
+          '<button class="btn ghost sm" data-act="ivDraw">换一题</button></div>' +
+          '<div class="iv-points" id="ivPoints" style="display:none">' + chips + '</div>';
+      }
       return head +
         '<div class="iv-live" style="display:grid;place-items:center;color:var(--ink-3)">' +
           '<div style="text-align:center">' +
             '<div class="rec-big"><i></i></div>' +
-            '<div style="margin-top:12px;font-size:13px">正在录音，录完自动转写</div>' +
-            '<div style="margin-top:4px;font-size:12px;color:var(--ink-4)">说完点「结束作答」</div>' +
+            '<div style="margin-top:12px;font-size:13px">正在录音，说给考官听</div>' +
+            '<div style="margin-top:4px;font-size:12px;color:var(--ink-4)">录音只留在本机；说完点「结束作答」，再补记要点</div>' +
           '</div>' +
         '</div>' +
         (iv.err ? '<div class="iv-err" id="ivErr">' + esc(iv.err) + '</div>' : '<div class="iv-err" id="ivErr" style="display:none"></div>') +
         '<div class="qbar"><button class="btn" data-act="ivStop">结束作答</button></div>';
-    }
-
-    if (iv.phase === 'transcribing') {
-      return head + '<div class="divider"></div>' +
-        '<div class="iv-progwrap">' +
-          '<div class="iv-prog"><div class="iv-progbar" id="ivProgBar" style="width:' + (ASR.pct || 0) + '%"></div></div>' +
-          '<div class="small muted" id="ivProgTxt" style="margin-top:10px;line-height:1.7">' + esc(ASR.msg || '准备中……') + '</div>' +
-        '</div>' +
-        '<div class="qbar"><span class="small muted">音频只在你的浏览器里处理，不会上传</span></div>';
     }
 
     if (iv.phase === 'review') {
@@ -975,11 +974,15 @@
     if (iv.mic && iv.mr && iv.mr.state !== 'inactive') {
       try { iv.mr.stop(); } catch (e) { /* 忽略 */ }
     }
+    if (!iv.mic) {
+      var ta = document.getElementById('ivText');
+      if (ta) iv.text = ta.value;
+      if (!String(iv.text || '').trim()) { toast('还没写内容，先敲几句再评分'); return; }
+      ivScore();
+      return;
+    }
     iv.phase = 'review';
     iv.err = '本浏览器不提供自动转写，请把刚才说的要点简要补在这里（也可只勾自评要点）';
-    renderMianshi();
-    return;
-    iv.phase = 'review';
     renderMianshi();
   }
 
@@ -1034,7 +1037,7 @@
     var ta = document.getElementById('ivText');
     if (ta) iv.text = ta.value;
     iv.text = (iv.text || '').trim();
-    if (!iv.text) { toast('还没有转写内容，先说一段或敲几句'); return; }
+    if (!iv.text) { toast('还没有内容，先说一段或敲几句'); return; }
 
     var used = ivUsed(iv.text);
     iv.used = used;
