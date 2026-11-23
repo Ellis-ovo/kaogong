@@ -602,3 +602,14 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
 .mk-paper-b{display:flex;gap:8px;flex-wrap:wrap}
 .mk-note{margin-top:12px;padding:12px 14px;border-radius:9px;background:#f7f8fa;color:#6b7280;font-size:12.5px;line-height:1.8}
 .mk-import{width:100%;min-height:110px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.6}
+
+/* ---------- 申论题目选择 ---------- */
+.es-picker{margin-bottom:14px}
+.es-picker .seg{margin-bottom:10px}
+.es-picker .seg button i{font-style:normal;font-size:11px;opacity:.55;margin-left:5px}
+.es-list{display:flex;flex-wrap:wrap;gap:6px}
+.es-no{width:34px;height:30px;border:1px solid #e3e4e8;background:#fff;border-radius:8px;font:inherit;font-size:12.5px;color:#4a5260;cursor:pointer;position:relative}
+.es-no:hover{border-color:#c9ccd3}
+.es-no.done{background:#eef7ee;border-color:#bfe0bf;color:#2f7a3f}
+.es-no.on{background:#111;border-color:#111;color:#fff;font-weight:600}
+.es-no.on.done{background:#1f7a3a;border-color:#1f7a3a;color:#fff}
