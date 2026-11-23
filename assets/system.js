@@ -378,7 +378,7 @@
   /* ============================================================
      申论
      ============================================================ */
-  var es = { id: 'e1', result: null, text: '' };
+  var es = { id: 'e1', type: '概括归纳', result: null, text: '', pick: 0 };
 
   function curEssay() {
     return D.essays.filter(function (e) { return e.id === es.id; })[0] || D.essays[0];
@@ -392,16 +392,24 @@
       '<h2>申论批改</h2>' +
       '<span class="sub">先自己写，再看采分点</span>' +
       '<div class="spacer"></div>' +
-      '<div class="seg">' + (function () {
-        var seen = {};
-        D.essays.forEach(function (x) { seen[x.type] = (seen[x.type] || 0) + 1; });
-        var idx = {};
-        return D.essays.map(function (x) {
-          idx[x.type] = (idx[x.type] || 0) + 1;
-          var label = x.type + (seen[x.type] > 1 ? ' ' + idx[x.type] : '');
-          return '<button class="' + (x.id === e.id ? 'on' : '') + '" data-act="essaySel" data-id="' + x.id + '">' + esc(label) + '</button>';
-        }).join('');
-      })() + '</div>' +
+      '<div class="es-picker">' +
+        '<div class="seg">' + (function () {
+          var types = [];
+          D.essays.forEach(function (x) { if (types.indexOf(x.type) < 0) types.push(x.type); });
+          return types.map(function (t) {
+            var n = D.essays.filter(function (x) { return x.type === t; }).length;
+            return '<button class="' + (t === e.type ? 'on' : '') + '" data-act="essayType" data-t="' + esc(t) + '">' +
+              esc(t) + '<i>' + n + '</i></button>';
+          }).join('');
+        })() + '</div>' +
+        '<div class="es-list">' + (function () {
+          var same = D.essays.filter(function (x) { return x.type === e.type; });
+          return same.map(function (x, i) {
+            var done = S.essays[x.id] ? ' done' : '';
+            return '<button class="es-no' + done + (x.id === e.id ? ' on' : '') + '" data-act="essaySel" data-id="' + x.id + '" title="' + esc(x.title) + '">' + (i + 1) + '</button>';
+          }).join('');
+        })() + '</div>' +
+      '</div>' +
     '</div>' +
 
     '<div class="essay-grid">' +
@@ -1257,12 +1265,21 @@
         break;
 
       /* --- 申论 --- */
-      case 'essaySel':
+      case 'essayType': {
+        var tt = t.getAttribute('data-t');
+        var first = D.essays.filter(function (x) { return x.type === tt; })[0];
+        if (first) { es.type = tt; es.id = first.id; es.result = null; es.text = ''; renderShenlun(); }
+        break;
+      }
+      case 'essaySel': {
         es.id = t.getAttribute('data-id');
+        var ce = D.essays.filter(function (x) { return x.id === es.id; })[0];
+        if (ce) es.type = ce.type;
         es.result = null;
         es.text = '';
         renderShenlun();
         break;
+      }
       case 'essayGrade':
         gradeEssay();
         break;
