@@ -589,3 +589,16 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
   .mk-grid,.mk-result{grid-template-columns:minmax(0,1fr)}
   .mk-nos{grid-template-columns:repeat(6,1fr)}
 }
+
+/* ---------- 真题卷 ---------- */
+.mk-tabs{display:inline-flex;margin:2px 0 16px;background:#f1f2f4;border-radius:9px;padding:3px}
+.mk-tabs button{border:0;background:none;font:inherit;font-size:13px;color:#4a5260;padding:6px 16px;border-radius:7px;cursor:pointer}
+.mk-tabs button.on{background:#fff;color:#111;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.mk-paper{border:1px solid #e6e7ea;border-radius:11px;padding:13px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.mk-paper-info{flex:1;min-width:240px}
+.mk-paper .mk-paper-b{margin-left:auto}
+.mk-paper-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.mk-paper-h b{font-size:14.5px;font-weight:600}
+.mk-paper-b{display:flex;gap:8px;flex-wrap:wrap}
+.mk-note{margin-top:12px;padding:12px 14px;border-radius:9px;background:#f7f8fa;color:#6b7280;font-size:12.5px;line-height:1.8}
+.mk-import{width:100%;min-height:110px;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.6}
