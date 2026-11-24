@@ -809,3 +809,42 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
 }
 .lv-meta b { color: #14171c; font-weight: 600; }
 .lv-hint { margin-top: 10px; font-size: 11.5px; color: #9aa1ab; line-height: 1.6; }
+
+/* ============================================================
+   手机端：底部标签栏导航（≤760px）
+   把侧栏改造成固定底部 tab，顶部只留标题栏
+   ============================================================ */
+.nav-short{display:none}
+
+@media (max-width:760px){
+  .side{
+    position:fixed; left:0; right:0; bottom:0; top:auto; height:auto; z-index:60;
+    flex-direction:row; align-items:stretch; overflow:visible;
+    padding:5px 2px calc(5px + env(safe-area-inset-bottom));
+    border-right:0; border-top:1px solid var(--line); border-bottom:0;
+    background:rgba(255,255,255,.96);
+    -webkit-backdrop-filter:saturate(180%) blur(16px); backdrop-filter:saturate(180%) blur(16px);
+    box-shadow:0 -8px 24px -14px rgba(0,0,0,.25);
+  }
+  .side .brand,.side .todaybox,.side .back{display:none}
+  .side nav{
+    width:100%; display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:0;
+  }
+  .nav-link{
+    flex-direction:column; gap:3px; justify-content:center; align-items:center;
+    padding:6px 0 5px; border-radius:9px; white-space:normal;
+  }
+  .nav-link svg{width:19px; height:19px}
+  .nav-link span{display:none}
+  .nav-short{display:block; font-style:normal; font-size:10px; line-height:1.25; font-weight:500}
+  .nav-link.on{background:transparent; color:#0062c4; font-weight:600}
+  .nav-link.on .nav-short{color:#0062c4}
+  .topbar{top:0}
+  .main{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  .wrap{padding:14px 14px 0}
+  .topbar{padding:0 14px}
+  .pill-day{display:none}
+  #toast{bottom:calc(88px + env(safe-area-inset-bottom))}
+  .mk-clock{position:static}
+  .mk-bigtime{font-size:26px}
+}
