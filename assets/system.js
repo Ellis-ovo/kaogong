@@ -477,21 +477,30 @@
       '<div class="explain" style="margin-top:12px">' + r.comment + '</div>';
   }
 
+  /* 比对前归一：去空白、去各类引号与括号，避免用户/范文用「」“”导致关键词不命中 */
+  function normKey(x) {
+    return String(x || '')
+      .replace(/\s/g, '')
+      .replace(/[\u201c\u201d\u2018\u2019"\u300c\u300d\u300e\u300f\u3010\u3011()\uff08\uff09\u3014\u3015]/g, '');
+  }
+
   function gradeEssay() {
     var e = curEssay();
-    var text = (es.text || '').replace(/\s/g, '');
-    if (text.length < 30) { toast('先写够 30 个字再批改'); return; }
+    var raw = es.text || '';
+    var chars = String(raw).replace(/\s/g, '').length;   /* 字数按原文计 */
+    var text = normKey(raw);
+    if (chars < 30) { toast('先写够 30 个字再批改'); return; }
 
     var total = 0, got = 0;
     var hits = e.points.map(function (p) {
-      var hit = p.k.some(function (k) { return text.indexOf(k) >= 0; });
+      var hit = p.k.some(function (k) { return text.indexOf(normKey(k)) >= 0; });
       total += p.w;
       if (hit) got += p.w;
       return { label: p.label, hit: hit, k: p.k, w: p.w };
     });
 
     var ratio = total ? got / total : 0;
-    var lenRate = text.length / e.limit;
+    var lenRate = chars / e.limit;
     var sPoint = ratio * 72;                                   // 采分点：72 分
     var sLen = lenRate >= 1 ? 6 : lenRate >= 0.8 ? 12 : lenRate >= 0.5 ? 9 : 3;  // 篇幅：12 分
     var sStruct = /一是|二是|首先|其次|第一|其一/.test(text) ? 8 : 2;           // 分条：8 分
@@ -514,11 +523,11 @@
     }
 
     var r = {
-      score: score, hits: hits, chars: text.length, limit: e.limit,
+      score: score, hits: hits, chars: chars, limit: e.limit,
       comment: '<b>批改建议：</b>' + tail
     };
     es.result = r;
-    S.essays[e.id] = { score: score, chars: text.length, t: Date.now() };
+    S.essays[e.id] = { score: score, chars: chars, t: Date.now() };
     addMinutes(25);
     save();
 
@@ -710,12 +719,12 @@
 
     var list = D.news.filter(function (n) {
       if (nz.cat !== '全部' && n.cat !== nz.cat) return false;
-      if (nz.q && (n.title + n.body + n.angle).indexOf(nz.q) < 0) return false;
+      if (nz.q && (n.title + n.body + n.angle + (n.src || '') + (n.cat || '')).indexOf(nz.q) < 0) return false;
       return true;
     });
 
     var html = '<div class="tool-line"><h2>时政素材</h2>' +
-      '<span class="sub">共 ' + D.news.length + ' 条 · 已收藏 ' + S.saved.length + ' 条</span></div>' +
+      '<span class="sub">共 ' + D.news.length + ' 条 · 已收藏 ' + S.saved.filter(function (k) { return D.news.some(function (n) { return (n.url || n.title) === k; }); }).length + ' 条</span></div>' +
       '<div class="news-tools">' +
         '<input id="newsQ" placeholder="搜索关键词，如：基层、数字、托育" value="' + esc(nz.q) + '">' +
         '<div class="mods">' + cats.map(function (c) {
@@ -724,10 +733,11 @@
       '</div>' +
       (list.length ? '<div class="news-grid">' + list.slice(0, nz.limit).map(function (n) {
         var i = D.news.indexOf(n);
-        var on = S.saved.indexOf(i) >= 0;
+        var key = n.url || n.title;
+        var on = S.saved.indexOf(key) >= 0;
         return '<div class="nitem">' +
           '<div class="row"><span class="tag">' + esc(n.d) + ' · ' + esc(n.cat) + '</span><div class="spacer"></div>' +
-            '<button class="icobtn' + (on ? ' on' : '') + '" data-act="nsave" data-i="' + i + '" title="收藏">' +
+            '<button class="icobtn' + (on ? ' on' : '') + '" data-act="nsave" data-i="' + i + '" data-k="' + esc(key) + '" title="收藏">' +
             '<svg width="13" height="13" viewBox="0 0 20 20" fill="' + (on ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.6"><path d="M5.5 3h9v14l-4.5-3.4L5.5 17z"/></svg></button>' +
           '</div>' +
           '<h4>' + esc(n.title) + '</h4>' +
@@ -1292,7 +1302,17 @@
       case 'essaySample': {
         var e = curEssay();
         var box = document.getElementById('essayResult');
-        box.innerHTML = '<div class="divider"></div><div class="explain"><b>参考范文（' + e.sample.replace(/\s/g, '').length + ' 字）：</b><br>' + esc(e.sample) + '</div>';
+        var sTxt = String(e.sample || '');
+      var sTitle = '', sBody = sTxt;
+      /* 贯彻执行、文章论述的范文首行是标题，单独居中 */
+      if (e.type === '贯彻执行' || e.type === '文章论述' || e.type === '文章写作') {
+        var at = sTxt.indexOf('\n\n');
+        if (at > 0) { sTitle = sTxt.slice(0, at).trim(); sBody = sTxt.slice(at + 2); }
+      }
+      box.innerHTML = '<div class="divider"></div><div class="sample-box">' +
+        '<div class="sample-cap">参考范文（约 ' + sTxt.replace(/\s/g, '').length + ' 字）</div>' +
+        (sTitle ? '<div class="sample-title">' + esc(sTitle) + '</div>' : '') +
+        '<div class="essay-sample">' + esc(sBody) + '</div></div>';
         break;
       }
       case 'slRun': {
@@ -1400,10 +1420,11 @@
         renderShizheng();
         break;
       case 'nsave': {
-        var i = +t.getAttribute('data-i');
-        var at = S.saved.indexOf(i);
+        var nidx = +t.getAttribute('data-i');
+        var nkey = t.getAttribute('data-k') || (D.news[nidx] && (D.news[nidx].url || D.news[nidx].title));
+        var at = S.saved.indexOf(nkey);
         if (at >= 0) { S.saved.splice(at, 1); toast('已取消收藏'); }
-        else { S.saved.push(i); toast('已收藏'); }
+        else { S.saved.push(nkey); toast('已收藏'); }
         save();
         renderShizheng();
         break;
