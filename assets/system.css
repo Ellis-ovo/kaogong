@@ -707,3 +707,80 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
   letter-spacing: .02em;
 }
 .mk-sgt span { color: #a3a9b2; }
+
+/* ---- 严格计时：右栏时钟 + 机读卡 ---- */
+.mk-side { display: flex; flex-direction: column; gap: 12px; }
+.mk-clock { position: sticky; top: 76px; }
+.mk-bigtime {
+  font-family: var(--serif, "Songti SC", "SimSun", serif);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: #14171c;
+  margin: 2px 0 10px;
+  font-variant-numeric: tabular-nums;
+}
+.mk-bigtime.warn { color: #c0392b; }
+.mk-stat { display: flex; justify-content: space-between; font-size: 12.5px; color: #6e7480; padding: 4px 0; }
+.mk-stat b { color: #14171c; font-weight: 600; }
+.mk-stat b.warn { color: #c0392b; }
+
+.mk-overlay {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(16, 18, 22, .42);
+  display: flex; align-items: center; justify-content: center;
+  padding: 28px 20px;
+}
+.mk-card {
+  background: #fff; border-radius: 12px; width: min(980px, 100%);
+  max-height: 100%; display: flex; flex-direction: column;
+  box-shadow: 0 30px 80px rgba(10, 12, 16, .35);
+}
+.mk-card-h {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border-bottom: 1px solid #eceef1;
+}
+.mk-card-h b { font-size: 15px; }
+.mk-card-h span { font-size: 12px; color: #7a8089; }
+.mk-card-h button { margin-left: auto; }
+.mk-card-b { padding: 16px 18px; overflow: auto; }
+.mk-card-f { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid #eceef1; }
+
+.fill-part + .fill-part { margin-top: 18px; }
+.fill-pt {
+  font-size: 12px; color: #4b5158; letter-spacing: .02em;
+  padding: 6px 10px; background: #f3f5f8; border-radius: 6px; margin-bottom: 8px;
+}
+.fill-pt span { color: #9aa1ab; }
+.fill-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 18px; }
+.fill-row { display: flex; align-items: center; gap: 8px; }
+.fill-no {
+  width: 26px; text-align: right; font-size: 11px; color: #8a9099;
+  background: none; border: 0; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.fill-no:hover { color: #0071e3; }
+.fill-row.blank .fill-no { color: #c0392b; }
+.bbs { display: flex; gap: 5px; }
+.bb {
+  width: 21px; height: 21px; border-radius: 50%;
+  border: 1px solid #d7dbe0; background: #fbfbfc;
+  font-size: 10.5px; color: #9aa1ab; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.bb:hover { border-color: #0071e3; color: #0071e3; }
+.bb.on { background: #14171c; border-color: #14171c; color: #fff; font-weight: 600; }
+
+@media (max-width: 760px) {
+  .fill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mk-card { max-height: 92%; }
+}
+
+.mk-autobar {
+  margin: -4px 0 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fdf1ef;
+  color: #a33527;
+  font-size: 13px;
+}
