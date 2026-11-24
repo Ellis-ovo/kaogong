@@ -637,7 +637,7 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
   color: #2b3038;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 460px;
+  max-height: 640px;
   overflow-y: auto;
 }
 
