@@ -378,7 +378,7 @@
   /* ============================================================
      申论
      ============================================================ */
-  var es = { id: 'e1', type: '概括归纳', result: null, text: '', pick: 0 };
+  var es = { id: 'e1', type: '概括归纳', result: null, text: '', pick: 0, level: 'high' };
 
   function curEssay() {
     return D.essays.filter(function (e) { return e.id === es.id; })[0] || D.essays[0];
@@ -482,6 +482,47 @@
     return String(x || '')
       .replace(/\s/g, '')
       .replace(/[\u201c\u201d\u2018\u2019"\u300c\u300d\u300e\u300f\u3010\u3011()\uff08\uff09\u3014\u3015]/g, '');
+  }
+
+
+  /* 范文三档对照：低分卷 / 中等卷 / 高分卷 */
+  function sampleBoxHTML(e) {
+    var lv = e.levels;
+    if (!lv) {
+      var sTxt = String(e.sample || '');
+      return '<div class="divider"></div><div class="sample-box"><div class="sample-cap">参考范文（约 ' +
+        sTxt.replace(/\s/g, '').length + ' 字）</div><div class="essay-sample">' + esc(sTxt) + '</div></div>';
+    }
+    var order = ['low', 'mid', 'high'];
+    var cur = lv[es.level] ? es.level : 'high';
+    var one = lv[cur];
+
+    var tabs = order.map(function (k) {
+      var x = lv[k];
+      return '<button class="lv-t' + (k === cur ? ' on' : '') + ' lv-' + k + '" data-act="essayLevel" data-k="' + k + '">' +
+        x.name + '<em>' + x.score + '</em></button>';
+    }).join('');
+
+    var title = '';
+    var body = one.text;
+    if (e.type === '贯彻执行' || e.type === '文章论述' || e.type === '文章写作') {
+      var at = body.indexOf('\n\n');
+      if (at > 0) {
+        title = '<div class="sample-title">' + esc(body.slice(0, at).trim()) + '</div>';
+        body = body.slice(at + 2);
+      }
+    }
+
+    return '<div class="divider"></div><div class="sample-box">' +
+      '<div class="lv-tabs">' + tabs + '</div>' +
+      '<div class="lv-note lv-note-' + cur + '">' + esc(one.note) + '</div>' +
+      '<div class="lv-meta"><span>采分点覆盖 <b>' + one.covered + ' / ' + one.total + '</b></span>' +
+        '<span>字数 <b>' + one.text.replace(/\s/g, '').length + '</b></span>' +
+        '<span>估分 <b>' + one.score + '</b></span></div>' +
+      title +
+      '<div class="essay-sample">' + esc(body) + '</div>' +
+      '<div class="lv-hint">三档用的是同一道题、同一套采分点，差别只在覆盖几条、有没有分条、语言是否规范。</div>' +
+    '</div>';
   }
 
   function gradeEssay() {
@@ -1302,17 +1343,14 @@
       case 'essaySample': {
         var e = curEssay();
         var box = document.getElementById('essayResult');
-        var sTxt = String(e.sample || '');
-      var sTitle = '', sBody = sTxt;
-      /* 贯彻执行、文章论述的范文首行是标题，单独居中 */
-      if (e.type === '贯彻执行' || e.type === '文章论述' || e.type === '文章写作') {
-        var at = sTxt.indexOf('\n\n');
-        if (at > 0) { sTitle = sTxt.slice(0, at).trim(); sBody = sTxt.slice(at + 2); }
+        box.innerHTML = sampleBoxHTML(e);
+        break;
       }
-      box.innerHTML = '<div class="divider"></div><div class="sample-box">' +
-        '<div class="sample-cap">参考范文（约 ' + sTxt.replace(/\s/g, '').length + ' 字）</div>' +
-        (sTitle ? '<div class="sample-title">' + esc(sTitle) + '</div>' : '') +
-        '<div class="essay-sample">' + esc(sBody) + '</div></div>';
+      case 'essayLevel': {
+        es.level = t.getAttribute('data-k');
+        var e2 = curEssay();
+        var box2 = document.getElementById('essayResult');
+        if (box2) box2.innerHTML = sampleBoxHTML(e2);
         break;
       }
       case 'slRun': {
