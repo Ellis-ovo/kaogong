@@ -11,48 +11,56 @@ window.MOCK = (function () {
   function fmt(s) { s = Math.max(0, s | 0); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
 
   var MODES = {
-    full: { name: '行测全卷', n: 100, secs: 120 * 60, desc: '五模块混合，按国考配比抽题，120 分钟' },
+    full: { name: '行测全卷', n: 130, secs: 120 * 60, desc: '按国考地市级卷面配比：常识 20 · 言语 40 · 数量 10 · 判断 40 · 资料 20' },
     quick: { name: '快速模拟', n: 40, secs: 40 * 60, desc: '40 题，40 分钟，适合每天一次' },
     one: { name: '单模块', n: 20, secs: 25 * 60, desc: '专练一个模块，20 题，25 分钟' }
   };
-  var FULL_RATIO = { '言语理解': 28, '判断推理': 30, '数量关系': 12, '资料分析': 15, '常识判断': 15 };
+  var FULL_RATIO = { '常识判断': 20, '言语理解': 40, '数量关系': 10, '判断推理': 40, '资料分析': 20 };
 
   /* 真题卷：题量与模块配比照对应年份/类别的真实卷面；
      题干由题库按固定种子组卷（同一套每次抽到的是同一批题）。 */
   var PAPERS = [
     {
       id: 'gk2025f', year: 2025, name: '2025 国考 · 副省级', kind: '国考副省级', mins: 120, seed: 20250101,
-      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 15, '资料分析': 20, '常识判断': 15 }
+      ratio: { '常识判断': 20, '言语理解': 40, '数量关系': 15, '判断推理': 40, '资料分析': 20 }
     },
     {
       id: 'gk2025d', year: 2025, name: '2025 国考 · 地市级', kind: '国考地市级', mins: 120, seed: 20250102,
-      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 10, '资料分析': 20, '常识判断': 20 }
+      ratio: { '常识判断': 20, '言语理解': 40, '数量关系': 10, '判断推理': 40, '资料分析': 20 }
     },
     {
       id: 'gk2024f', year: 2024, name: '2024 国考 · 副省级', kind: '国考副省级', mins: 120, seed: 20240101,
-      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 15, '资料分析': 20, '常识判断': 15 }
+      ratio: { '常识判断': 20, '言语理解': 40, '数量关系': 15, '判断推理': 40, '资料分析': 20 }
     },
     {
       id: 'gk2024d', year: 2024, name: '2024 国考 · 地市级', kind: '国考地市级', mins: 120, seed: 20240102,
-      ratio: { '言语理解': 40, '判断推理': 40, '数量关系': 10, '资料分析': 20, '常识判断': 20 }
+      ratio: { '常识判断': 20, '言语理解': 40, '数量关系': 10, '判断推理': 40, '资料分析': 20 }
     },
     {
       id: 'lk2024a', year: 2024, name: '2024 联考 · A 卷', kind: '多省联考', mins: 120, seed: 20240201,
-      ratio: { '言语理解': 35, '判断推理': 35, '数量关系': 10, '资料分析': 20, '常识判断': 20 }
+      ratio: { '常识判断': 20, '言语理解': 35, '数量关系': 10, '判断推理': 35, '资料分析': 20 }
     },
     {
       id: 'js2024a', year: 2024, name: '2024 江苏省考 · A 类', kind: '省考', mins: 120, seed: 20240301,
-      ratio: { '言语理解': 35, '判断推理': 40, '数量关系': 15, '资料分析': 20, '常识判断': 20 }
+      ratio: { '常识判断': 20, '言语理解': 35, '数量关系': 20, '判断推理': 40, '资料分析': 20 }
     },
     {
       id: 'zj2024a', year: 2024, name: '2024 浙江省考 · A 卷', kind: '省考', mins: 120, seed: 20240401,
-      ratio: { '言语理解': 30, '判断推理': 35, '数量关系': 20, '资料分析': 20, '常识判断': 25 }
+      ratio: { '常识判断': 20, '言语理解': 30, '数量关系': 25, '判断推理': 35, '资料分析': 20 }
     },
     {
       id: 'gd2023x', year: 2023, name: '2023 广东省考 · 县级', kind: '省考', mins: 90, seed: 20230501,
-      ratio: { '言语理解': 30, '判断推理': 30, '数量关系': 15, '资料分析': 15, '常识判断': 10 }
+      ratio: { '常识判断': 15, '言语理解': 15, '数量关系': 15, '判断推理': 40, '资料分析': 15 }
     }
   ];
+
+  /* 各模块参考时限（分钟）与估分权重——考试大纲不公布单题分值，这里用机构通行估分口径，
+     交卷时按「加权得分 / 加权满分 × 100」折算成百分制。 */
+  var LIMIT = { '常识判断': 15, '言语理解': 35, '数量关系': 15, '判断推理': 35, '资料分析': 20 };
+  var WEIGHT = { '常识判断': 0.5, '言语理解': 0.8, '数量关系': 1, '判断推理': 0.8, '资料分析': 1 };
+  var CN = ['一', '二', '三', '四', '五', '六', '七', '八'];
+  /* 真实卷面顺序：常识 → 言语 → 数量 → 判断 → 资料 */
+  var EXAM_ORDER = ['常识判断', '言语理解', '数量关系', '判断推理', '资料分析'];
 
   var mk = {
     phase: 'idle',
@@ -143,7 +151,7 @@ window.MOCK = (function () {
     var qs;
     if (c.isPaper) {
       qs = sample(c.ratio, c.seed);
-      qs.sort(function (a, b) { return D_modules().indexOf(a.mod) - D_modules().indexOf(b.mod); });
+      qs.sort(function (a, b) { return EXAM_ORDER.indexOf(a.mod) - EXAM_ORDER.indexOf(b.mod); });
       return qs.slice(0, c.n);
     }
     if (mk.mode === 'one') {
@@ -157,12 +165,37 @@ window.MOCK = (function () {
       D_modules().forEach(function (m) { q2[m] = Math.round(c.n * (FULL_RATIO[m] / 100)); });
       qs = sample(q2, Date.now());
     }
-    qs.sort(function (a, b) { return D_modules().indexOf(a.mod) - D_modules().indexOf(b.mod); });
+    qs.sort(function (a, b) { return EXAM_ORDER.indexOf(a.mod) - EXAM_ORDER.indexOf(b.mod); });
     return qs.slice(0, c.n);
   }
 
   function D_modules() {
     return (window.APP_DATA.modules || ['言语理解', '判断推理', '数量关系', '资料分析', '常识判断']);
+  }
+
+
+  /* 连续题号下，判断第 i 题属于第几部分、该部分起止 */
+  function modOrder() {
+    var out = [];
+    mk.qs.forEach(function (q) { if (out.indexOf(q.mod) < 0) out.push(q.mod); });
+    return out;
+  }
+
+  function partInfo(i) {
+    var q = mk.qs[i];
+    if (!q) return null;
+    var idxs = [];
+    mk.qs.forEach(function (x, k) { if (x.mod === q.mod) idxs.push(k); });
+    var order = modOrder();
+    return {
+      mod: q.mod,
+      part: order.indexOf(q.mod),
+      start: idxs[0],
+      total: idxs.length,
+      local: idxs.indexOf(i) + 1,
+      limit: LIMIT[q.mod] || 15,
+      weight: WEIGHT[q.mod] || 0.8
+    };
   }
 
   /* ---------------- 计时 ---------------- */
@@ -228,7 +261,7 @@ window.MOCK = (function () {
     if (mk.tab === 'real') return head + tabs + viewPapers();
 
     var mode = MODES[mk.mode];
-    var modBtns = D_modules().map(function (m) {
+    var modBtns = EXAM_ORDER.map(function (m) {
       return '<button class="' + (mk.mod === m ? 'on' : '') + '" data-act="mkMode" data-m="' + esc(m) + '">' + esc(m) + '</button>';
     }).join('');
 
@@ -256,8 +289,8 @@ window.MOCK = (function () {
           histHTML() +
         '</div>' +
       '</div>' +
-      '<div class="card"><div class="card-h"><h2>题库构成</h2><span class="hint">按模块随机抽题</span></div>' +
-        D_modules().map(function (m) {
+      '<div class="card"><div class="card-h"><h2>题库构成</h2><span class="hint">按卷面顺序抽题</span></div>' +
+        EXAM_ORDER.map(function (m) {
           var w = Math.max(2, Math.round(counts[m] / Math.max(1, bank) * 100));
           return '<div class="progrow"><span class="nm">' + esc(m) + '</span>' +
             '<span class="tr"><i style="width:' + w + '%"></i></span>' +
@@ -323,28 +356,52 @@ window.MOCK = (function () {
     var c = cfg();
     var done = Object.keys(mk.picks).length;
     var pickIdx = mk.picks[q.id];
+    var pi = partInfo(mk.idx);
 
     var opts = q.opts.map(function (o, i) {
       return '<button class="opt2' + (pickIdx === i ? ' pick' : '') + '" data-act="mkPickOpt" data-i="' + i + '">' +
         '<span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o) + '</span></button>';
     }).join('');
 
-    var sheet = mk.qs.map(function (x, i) {
-      var cls = mk.picks[x.id] !== undefined ? 'done' : '';
-      if (i === mk.idx) cls += ' cur';
-      return '<button class="mk-no ' + cls + '" data-act="mkGo" data-i="' + i + '">' + (i + 1) + '</button>';
+    /* 答题卡按部分分组，题号连续 */
+    var order = modOrder();
+    var sheet = order.map(function (mod, gi) {
+      var idxs = [];
+      mk.qs.forEach(function (x, k) { if (x.mod === mod) idxs.push(k); });
+      var cells = idxs.map(function (k) {
+        var cls = mk.picks[mk.qs[k].id] !== undefined ? 'done' : '';
+        if (k === mk.idx) cls += ' cur';
+        return '<button class="mk-no ' + cls + '" data-act="mkGo" data-i="' + k + '">' + (k + 1) + '</button>';
+      }).join('');
+      return '<div class="mk-sgroup"><div class="mk-sgt">' + CN[gi] + '、' + esc(mod) +
+        '<span>' + idxs.length + ' 题</span></div><div class="mk-nos">' + cells + '</div></div>';
     }).join('');
+
+    var head = c.isPaper
+      ? '<div class="mk-paperhead">' +
+          '<div class="mk-ph-t">' + esc(c.name) + '</div>' +
+          '<div class="mk-ph-s">共 ' + mk.qs.length + ' 题 · 参考时限 ' + Math.round(c.secs / 60) +
+            ' 分钟 · 满分 100 分</div>' +
+        '</div>'
+      : '';
+
+    var partBar = '<div class="mk-part">' +
+      '<b>第' + CN[pi.part] + '部分　' + esc(pi.mod) + '</b>' +
+      '<span>共 ' + pi.total + ' 题 ｜ 参考时限 ' + pi.limit + ' 分钟</span>' +
+      '<em>' + pi.local + ' / ' + pi.total + '</em>' +
+      '</div>';
 
     return '<div class="mk-run">' +
       '<div class="card mk-qcard">' +
-        '<div class="mk-top"><span class="tag blue">' + esc(q.mod) + '</span>' +
+        head +
+        partBar +
+        '<div class="mk-top">' +
           '<span class="tag">' + esc(q.tag || '') + '</span>' +
           '<div class="spacer"></div>' +
-          '<span class="mk-counter">' + (mk.idx + 1) + ' / ' + mk.qs.length + '</span>' +
           '<span class="mk-timer' + (mk.left <= 300 ? ' warn' : '') + '" id="mkTimer">' + fmt(mk.left) + '</span>' +
         '</div>' +
         (q.mat ? '<div class="matbox">' + esc(q.mat) + '</div>' : '') +
-        '<p class="qstem">' + esc(q.stem) + '</p>' +
+        '<p class="qstem"><b class="qno">' + (mk.idx + 1) + '．</b>' + esc(q.stem) + '</p>' +
         '<div class="opts2">' + opts + '</div>' +
         '<div class="qbar">' +
           '<button class="btn ghost sm" data-act="mkPrev"' + (mk.idx === 0 ? ' disabled' : '') + '>上一题</button>' +
@@ -355,10 +412,10 @@ window.MOCK = (function () {
       '</div>' +
       '<div class="card mk-sheet">' +
         '<div class="card-h"><h2>答题卡</h2><span class="hint">' + esc(c.name) + '</span></div>' +
-        '<div class="mk-nos">' + sheet + '</div>' +
+        sheet +
         '<div class="divider"></div>' +
         '<button class="btn ghost sm" data-act="mkSubmit" style="width:100%">交卷</button>' +
-        '<div class="small muted" style="margin-top:8px;line-height:1.7">交卷后立即出分，并给出每题解析。</div>' +
+        '<div class="small muted" style="margin-top:8px;line-height:1.7">交卷后按模块折算百分制，并给出每题解析。</div>' +
       '</div>' +
     '</div>';
   }
@@ -370,7 +427,7 @@ window.MOCK = (function () {
     var modRows = r.mods.map(function (m) {
       return '<div class="progrow"><span class="nm">' + esc(m.mod) + '</span>' +
         '<span class="tr"><i style="width:' + m.rate + '%"></i></span>' +
-        '<span class="pc">' + m.correct + '/' + m.total + '</span></div>';
+        '<span class="pc">' + m.get + ' / ' + m.full + '</span></div>';
     }).join('');
 
     var wrongRows = r.items.filter(function (it) { return !it.ok; }).map(function (it) {
@@ -389,13 +446,19 @@ window.MOCK = (function () {
 
       '<div class="mk-result">' +
         '<div class="card mk-score"><div class="sc ' + cls + '">' + r.score + '</div>' +
-          '<div class="small muted">百分制</div>' +
+          '<div class="small muted">折算百分制</div>' +
           '<div class="divider"></div>' +
           '<div class="kv"><span>正确</span><b>' + r.correct + ' 题</b></div>' +
           '<div class="kv"><span>错误</span><b>' + (r.total - r.correct) + ' 题</b></div>' +
+          '<div class="kv"><span>正确率</span><b>' + r.rate + '%</b></div>' +
           '<div class="kv"><span>用时</span><b>' + fmt(r.used) + '</b></div>' +
         '</div>' +
-        '<div class="card"><div class="card-h"><h2>分模块</h2><span class="hint">正确率</span></div>' + modRows + '</div>' +
+        '<div class="card"><div class="card-h"><h2>分部分得分</h2><span class="hint">按估分权重折算</span></div>' +
+          modRows +
+          '<div class="small muted" style="margin-top:10px;line-height:1.7">' +
+            '考试大纲不公布单题分值，这里按常识 0.5、言语 0.8、数量 1、判断 0.8、资料 1 的通行估分口径加权，再折算成百分制。' +
+          '</div>' +
+        '</div>' +
       '</div>' +
 
       '<div class="card"><div class="card-h"><h2>错题解析</h2><span class="hint">' +
@@ -446,17 +509,31 @@ window.MOCK = (function () {
       return { i: i, q: q, pick: pick === undefined ? -1 : pick, ok: pick === q.ans };
     });
     var correct = items.filter(function (x) { return x.ok; }).length;
-    var mods = D_modules().map(function (m) {
+
+    var rawGet = 0, rawMax = 0;
+    var mods = EXAM_ORDER.map(function (m) {
       var sub = items.filter(function (x) { return x.q.mod === m; });
       if (!sub.length) return null;
-      return { mod: m, total: sub.length, correct: sub.filter(function (x) { return x.ok; }).length, rate: Math.round(sub.filter(function (x) { return x.ok; }).length / sub.length * 100) };
+      var right = sub.filter(function (x) { return x.ok; }).length;
+      var w = WEIGHT[m] || 0.8;
+      rawGet += right * w;
+      rawMax += sub.length * w;
+      return {
+        mod: m, total: sub.length, correct: right,
+        rate: Math.round(right / sub.length * 100),
+        get: Math.round(right * w * 10) / 10,
+        full: Math.round(sub.length * w * 10) / 10
+      };
     }).filter(Boolean);
+
+    var score = rawMax ? Math.round(rawGet / rawMax * 1000) / 10 : 0;
 
     mk.res = {
       name: cfg().name,
       total: items.length,
       correct: correct,
-      score: Math.round(correct / items.length * 100),
+      score: score,
+      rate: Math.round(correct / items.length * 100),
       used: used,
       mods: mods,
       items: items
@@ -465,7 +542,7 @@ window.MOCK = (function () {
 
     var S = state();
     S.mock = S.mock || [];
-    S.mock.unshift({ t: Date.now(), name: mk.res.name, score: mk.res.score, correct: correct, total: items.length, used: used });
+    S.mock.unshift({ t: Date.now(), name: mk.res.name, score: score, correct: correct, total: items.length, used: used });
     S.mock = S.mock.slice(0, 10);
     items.forEach(function (it) {
       if (it.ok) return;
