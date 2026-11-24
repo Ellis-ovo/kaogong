@@ -622,3 +622,33 @@ button{font-family:inherit; cursor:pointer; border:0; background:none; color:inh
 .nsrc{font-size:11.5px;color:#9aa1ab;margin:-2px 0 9px}
 .nsrc a{color:#9aa1ab;text-decoration:none;border-bottom:1px dotted #c8ccd3}
 .nsrc a:hover{color:#3d4655;border-bottom-color:#3d4655}
+
+
+/* 参考范文：按申论格式渲染（保留段落与段首缩进） */
+.essay-sample {
+  margin-top: 10px;
+  padding: 14px 16px;
+  background: #fbfbfd;
+  border: 1px solid #ececf1;
+  border-radius: 10px;
+  font-family: var(--serif, "Songti SC", "SimSun", serif);
+  font-size: 13.5px;
+  line-height: 1.95;
+  color: #2b3038;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.sample-box { margin-top: 12px; }
+.sample-cap { font-size: 12.5px; color: #6e7480; margin-bottom: 8px; }
+
+.sample-title {
+  text-align: center;
+  font-family: var(--serif, "Songti SC", "SimSun", serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+  padding: 10px 0 6px;
+}
