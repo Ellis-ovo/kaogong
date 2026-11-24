@@ -117,8 +117,6 @@
     if (sb) sb.style.width = p + '%';
     var ss = document.getElementById('sideStreak');
     if (ss) ss.textContent = '第 ' + streak() + ' 天';
-    var cp = document.getElementById('clockPill');
-    if (cp) cp.innerHTML = '距考试 <b>' + Math.max(0, daysUntil(EXAM_DATE)) + '</b> 天';
   }
 
   /* ============================================================
