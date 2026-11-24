@@ -10,8 +10,9 @@
   var EXAM_DATE = '2027-04-28';
 
   /* ---------------- 1. 状态 ---------------- */
-  var DEFAULTS = { answers: {}, wrong: {}, essays: {}, saved: [], iv: [],
-    mock: [], papers: [], tasks: {}, days: {}, ivf: {}, ks: { n: 0 }, ksHist: [], ksFav: [] };
+  var DEFAULTS = { answers: {}, wrong: {}, essays: {}, notes: {}, saved: [], iv: [],
+    mock: [], papers: [], tasks: {}, days: {}, ivf: {}, ks: { n: 0 }, ksHist: [], ksFav: [],
+    theme: 'light' };
 
   var S = (function () {
     var raw = null;
@@ -84,6 +85,7 @@
     koushu: { t: '口语规范化', s: '把大白话翻成能落笔的申论句子', render: renderKoushu },
     shizheng: { t: '时政素材', s: '只留能写进文章的东西', render: renderShizheng },
     mianshi: { t: '面试陪练', s: '抽题、计时、复盘，一条龙', render: renderMianshi },
+    ciku: { t: '词库', s: '常识专项 · 申论规范词 · 成语 · 实词辨析', render: renderCiku },
     mock: { t: '模拟考试', s: '按考试节奏做一整套，交卷即出分', render: renderMock },
     stats: { t: '数据看板', s: '看清弱项，才知道下一步练什么', render: renderStats }
   };
@@ -183,6 +185,7 @@
           '<a href="#mock"><b>模拟考试</b><span>限时整套卷 · 交卷即出分</span></a>' +
           '<a href="#shenlun"><b>申论批改</b><span>' + D.essays.length + ' 套题 · 采分点对照</span></a>' +
           '<a href="#shizheng"><b>时政素材</b><span>' + D.news.length + ' 条 · 可搜索收藏</span></a>' +
+          '<a href="#ciku"><b>词库</b><span>规范词 · 成语 · 实词 · 常识专项</span></a>' +
         '</div>' +
       '</div>';
 
@@ -224,16 +227,32 @@
   /* ============================================================
      行测
      ============================================================ */
-  var xc = { mod: '全部', i: 0, picked: -1, graded: false, tab: 'practice', attrib: null };
+  var xc = { mod: '全部', i: 0, picked: -1, graded: false, tab: 'practice', attrib: null, tag: null };
+  var noteOpen = false;
 
   function xcList() {
     var pool = D.questions.filter(function (q) { return q.opts && q.opts.length >= 2 && q.ans >= 0; });
-    return xc.mod === '全部' ? pool : pool.filter(function (q) { return q.mod === xc.mod; });
+    if (xc.mod !== '全部') pool = pool.filter(function (q) { return q.mod === xc.mod; });
+    if (xc.tag) pool = pool.filter(function (q) { return q.tag === xc.tag; });
+    return pool;
   }
 
   var MATS = {};
   D.questions.forEach(function (q) { if (q.material) MATS[q.id] = q.stem.replace(/^【材料】/, ''); });
   var QCOUNT = D.questions.filter(function (q) { return q.opts && q.opts.length >= 2; }).length;
+
+  function noteBoxHTML(q) {
+    var note = S.notes['q:' + q.id] || '';
+    return '<div class="notebox">' +
+      '<div class="note-h"><span class="small muted">' + (note ? '我的笔记（已记）' : '随手记：思路 · 易错点 · 口诀') + '</span>' +
+      '<div class="spacer"></div>' +
+      '<button class="btn ghost sm" data-act="noteToggle">' + (noteOpen ? '收起' : '笔记') + '</button></div>' +
+      (noteOpen ? '<textarea id="noteText" class="note-text" placeholder="记下这题的思路、易错点、口诀…">' + esc(note) + '</textarea>' +
+        '<div class="note-f"><div class="spacer"></div>' +
+        (note ? '<button class="btn ghost sm" data-act="noteDel">删除</button>' : '') +
+        '<button class="btn sm" data-act="noteSave">保存笔记</button></div>' : '') +
+      '</div>';
+  }
 
   function renderXingce() {
     var html = '<div class="tool-line">' +
@@ -250,6 +269,14 @@
       return '<button class="mod-chip' + (m === xc.mod ? ' on' : '') + '" data-act="xcmod" data-m="' + esc(m) + '">' + esc(m) + '</button>';
     }).join('');
     html += '<div class="mods" style="margin-bottom:16px">' + mods + '</div>';
+
+    if (xc.mod === '常识判断' && xc.tab === 'practice') {
+      var csTags = ['全部', '法律', '政治', '经济', '科技', '人文历史', '地理国情'].map(function (tg) {
+        var cur = (xc.tag || '全部') === tg;
+        return '<button class="mod-chip' + (cur ? ' on' : '') + '" data-act="xctag" data-t="' + (tg === '全部' ? '' : tg) + '">' + tg + '</button>';
+      }).join('');
+      html += '<div class="mods" style="margin-bottom:16px">' + csTags + '</div>';
+    }
 
     if (xc.tab === 'wrong') { mount(html + wrongBook()); return; }
 
@@ -302,6 +329,7 @@
         '<p class="qstem">' + esc(q.stem) + '</p>' +
         '<div class="opts2">' + opts + '</div>' +
         after +
+        noteBoxHTML(q) +
         '<div class="qbar">' +
           '<button class="btn ghost sm" data-act="prev"' + (list.length < 2 ? ' disabled' : '') + '>上一题</button>' +
           '<button class="btn sm" data-act="next">下一题</button>' +
@@ -326,6 +354,55 @@
     return '<div class="card"><div class="card-h"><h2>模块正确率</h2><span class="hint">只统计已作答的题</span></div>' + rows + '</div>';
   }
 
+  function printWrongBook() {
+    var ids = Object.keys(S.wrong);
+    if (!ids.length) { toast('错题本是空的'); return; }
+    var body = ids.map(function (id) {
+      var q = D.questions.filter(function (x) { return x.id === id; })[0];
+      if (!q) return '';
+      var w = S.wrong[id];
+      var note = S.notes['q:' + id] || '';
+      return '<div class="pw-item"><h3>' + esc(q.stem) + '</h3>' +
+        q.opts.map(function (o, i) {
+          return '<p>' + (i === q.ans ? '<b>✔ ' : '') + 'ABCD'[i] + '. ' + esc(o) + (i === q.ans ? '</b>' : '') + '</p>';
+        }).join('') +
+        '<p class="pw-exp">解析：' + esc(q.exp || '无') + '</p>' +
+        '<p class="pw-meta">错因：' + esc(w.kind || '未归因') + ' · 错 ' + (w.n || 1) + ' 次' + (note ? ' · 笔记：' + esc(note) : '') + '</p></div>';
+    }).join('');
+    var wnd = window.open('', '_blank', 'width=780,height=940');
+    if (!wnd) { toast('浏览器拦截了弹窗，请允许后重试'); return; }
+    wnd.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>错题本</title><style>' +
+      'body{font-family:"Microsoft YaHei",sans-serif;padding:30px 36px;color:#171b24;font-size:13.5px}' +
+      '.pw-item{border-bottom:1px solid #e4e7ec;padding:14px 0;break-inside:avoid}' +
+      'h1{font-size:19px;margin:0 0 4px}h3{font-size:14.5px;margin:0 0 9px}' +
+      'p{margin:4px 0;line-height:1.8}.pw-exp{color:#3d4a5f}.pw-meta{color:#8a93a3;font-size:12px}' +
+      '.sub{color:#8a93a3;font-size:12.5px;margin-bottom:12px}@media print{body{padding:6px}}' +
+      '</style></head><body><h1>错题本</h1><div class="sub">共 ' + ids.length + ' 道 · 打印于 ' + dayKey() + '</div>' + body + '</body></html>');
+    wnd.document.close();
+    setTimeout(function () { try { wnd.focus(); wnd.print(); } catch (e) {} }, 300);
+    toast('已生成打印版（共 ' + ids.length + ' 道）');
+  }
+
+  function exportNews() {
+    var list = D.news.filter(function (n) {
+      if (nz.cat !== '全部' && n.cat !== nz.cat) return false;
+      if (nz.q && (n.title + n.body + n.angle + (n.src || '') + (n.cat || '')).indexOf(nz.q) < 0) return false;
+      return true;
+    });
+    if (!list.length) { toast('没有可导出的素材'); return; }
+    var txt = '时政素材导出（共 ' + list.length + ' 条）\n导出时间：' + dayKey() + '\n' + new Array(41).join('=') + '\n\n';
+    txt += list.map(function (n) {
+      return '【' + n.d + ' · ' + n.cat + '】' + n.title + '\n' + n.body + '\n可用角度：' + n.angle + (n.src ? '\n来源：' + n.src + (n.url ? ' ' + n.url : '') : '') + '\n';
+    }).join('\n');
+    var blob = new Blob(['\ufeff' + txt], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '时政素材-' + dayKey() + '.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 400);
+    toast('已导出 ' + list.length + ' 条素材');
+  }
+
   function wrongBook() {
     var ids = Object.keys(S.wrong);
     if (!ids.length) return '<div class="card"><div class="empty">错题本是空的。做完题答错会自动进来，并记录你的错因。</div></div>';
@@ -343,7 +420,8 @@
       '</tr>';
     }).join('');
     return '<div class="card"><div class="card-h"><h2>错题本</h2><span class="hint">共 ' + ids.length + ' 道</span>' +
-      '<div class="spacer"></div><button class="btn ghost sm" data-act="clearWrong">清空</button></div>' +
+      '<div class="spacer"></div><button class="btn ghost sm" data-act="printWrong">打印错题本</button>' +
+      '<button class="btn ghost sm" data-act="clearWrong">清空</button></div>' +
       '<table class="tbl"><thead><tr><th>模块</th><th>题干</th><th>答案</th><th>错因</th><th>次数</th><th></th></tr></thead>' +
       '<tbody>' + rows + '</tbody></table></div>';
   }
@@ -379,6 +457,7 @@
      申论
      ============================================================ */
   var es = { id: 'e1', type: '概括归纳', result: null, text: '', pick: 0, level: 'high' };
+  var eNoteOpen = false;
 
   function curEssay() {
     return D.essays.filter(function (e) { return e.id === es.id; })[0] || D.essays[0];
@@ -427,8 +506,13 @@
           '<span class="counter" id="ansCount">0 / ' + e.limit + '</span>' +
           '<div class="spacer"></div>' +
           '<button class="btn ghost sm" data-act="essaySample">看范文</button>' +
+          '<button class="btn ghost sm" data-act="eNoteToggle">' + (eNoteOpen ? '收起笔记' : ('笔记' + (S.notes['e:' + e.id] ? ' ✓' : ''))) + '</button>' +
           '<button class="btn" data-act="essayGrade">对照采分点批改</button>' +
         '</div>' +
+        (eNoteOpen ? '<div class="notebox"><textarea id="eNoteText" class="note-text" placeholder="记下这套题的思路、范文要点、自己的失分点…">' + esc(S.notes['e:' + e.id] || '') + '</textarea>' +
+          '<div class="note-f"><div class="spacer"></div>' +
+          (S.notes['e:' + e.id] ? '<button class="btn ghost sm" data-act="eNoteDel">删除</button>' : '') +
+          '<button class="btn sm" data-act="eNoteSave">保存</button></div></div>' : '') +
         '<div id="essayResult">' + (es.result ? essayResultHTML(es.result) : '') + '</div>' +
       '</div>' +
     '</div>' +
@@ -765,7 +849,9 @@
     });
 
     var html = '<div class="tool-line"><h2>时政素材</h2>' +
-      '<span class="sub">共 ' + D.news.length + ' 条 · 已收藏 ' + S.saved.filter(function (k) { return D.news.some(function (n) { return (n.url || n.title) === k; }); }).length + ' 条</span></div>' +
+      '<span class="sub">共 ' + D.news.length + ' 条 · 已收藏 ' + S.saved.filter(function (k) { return D.news.some(function (n) { return (n.url || n.title) === k; }); }).length + ' 条</span>' +
+      '<div class="spacer"></div>' +
+      '<button class="btn ghost sm" data-act="newsExport">导出素材</button></div>' +
       '<div class="news-tools">' +
         '<input id="newsQ" placeholder="搜索关键词，如：基层、数字、托育" value="' + esc(nz.q) + '">' +
         '<div class="mods">' + cats.map(function (c) {
@@ -802,6 +888,62 @@
         if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) {} }
       });
     }
+  }
+
+  /* ============================================================
+     词库
+     ============================================================ */
+  var GV = window.GV || { norms: [], idioms: [], words: [] };
+  var ci = { tab: 'cs', q: '' };
+
+  function renderCiku() {
+    var tabs = [['cs', '常识专项'], ['norms', '申论规范词'], ['idioms', '成语'], ['words', '实词辨析']];
+    var html = '<div class="tool-line"><h2>词库</h2>' +
+      '<span class="sub">常识专项 · 规范词 ' + GV.norms.length + ' 条 · 成语 ' + GV.idioms.length + ' 条 · 实词 ' + GV.words.length + ' 对</span>' +
+      '</div>' +
+      '<div class="ci-seg">' + tabs.map(function (x) {
+        return '<button class="' + (ci.tab === x[0] ? 'on' : '') + '" data-act="ciTab" data-t="' + x[0] + '">' + x[1] + '</button>';
+      }).join('') + '</div>';
+
+    if (ci.tab === 'cs') {
+      html += ciCatsHTML();
+    } else {
+      var ph = ci.tab === 'norms' ? '搜规范词，如「放管服」「枫桥经验」'
+        : ci.tab === 'idioms' ? '搜成语，如「一蹴而就」「背道而驰」'
+        : '搜实词，如「必须」「截止」「置疑」';
+      html += '<input class="ci-q" data-act="ciq" placeholder="' + ph + '" value="' + esc(ci.q) + '">' +
+        '<div id="ciHolder">' + ciListHTML() + '</div>';
+    }
+    mount(html);
+  }
+
+  function ciCatsHTML() {
+    var tags = ['法律', '政治', '经济', '科技', '人文历史', '地理国情'];
+    var all = D.questions.filter(function (q) { return q.mod === '常识判断'; }).length;
+    var cards = tags.map(function (tg) {
+      var n = D.questions.filter(function (q) { return q.mod === '常识判断' && q.tag === tg; }).length;
+      return '<div class="ci-cat" data-act="ciGo" data-t="' + tg + '"><b>' + tg + '</b><span>' + n + ' 道 · 点击进入专项刷题</span><span class="go">去练 →</span></div>';
+    }).join('');
+    return '<div class="ci-count">常识按六个方向分好类（共 ' + all + ' 道），点卡片直接进入对应方向的刷题；也可以点右上角放大镜全局搜题。</div>' +
+      '<div class="ci-cats">' + cards + '</div>';
+  }
+
+  function ciListHTML() {
+    var q = (ci.q || '').trim().toLowerCase();
+    var arr = [], html = '';
+    if (ci.tab === 'norms') {
+      arr = GV.norms.filter(function (x) { return !q || (x[0] + ' ' + x[1]).toLowerCase().indexOf(q) >= 0; });
+      html = arr.map(function (x) { return '<div class="ci-card"><b>' + esc(x[0]) + '</b><p>' + esc(x[1]) + '</p></div>'; }).join('');
+    } else if (ci.tab === 'idioms') {
+      arr = GV.idioms.filter(function (x) { return !q || (x[0] + ' ' + x[1]).toLowerCase().indexOf(q) >= 0; });
+      html = arr.map(function (x) { return '<div class="ci-card"><b>' + esc(x[0]) + '</b><p>' + esc(x[1]) + '</p></div>'; }).join('');
+    } else {
+      arr = GV.words.filter(function (x) { return !q || (x[0] + ' ' + x[1] + ' ' + x[2]).toLowerCase().indexOf(q) >= 0; });
+      html = arr.map(function (x) {
+        return '<div class="ci-card"><b>' + esc(x[0]) + ' <span class="vs">/</span> ' + esc(x[1]) + '</b><p>' + esc(x[2]) + '</p></div>';
+      }).join('');
+    }
+    return arr.length ? '<div class="ci-list">' + html + '</div>' : '<div class="ci-empty">没有匹配的词条，换个关键词试试。</div>';
   }
 
   /* ============================================================
@@ -1266,11 +1408,17 @@
       /* --- 行测 --- */
       case 'xctab':
         xc.tab = t.getAttribute('data-t');
-        xc.picked = -1; xc.graded = false;
+        xc.picked = -1; xc.graded = false; noteOpen = false;
         renderXingce();
         break;
       case 'xcmod':
         xc.mod = t.getAttribute('data-m');
+        xc.tag = null;
+        xc.i = 0; xc.picked = -1; xc.graded = false;
+        renderXingce();
+        break;
+      case 'xctag':
+        xc.tag = t.getAttribute('data-t') || null;
         xc.i = 0; xc.picked = -1; xc.graded = false;
         renderXingce();
         break;
@@ -1294,6 +1442,44 @@
       case 'resetq':
         resetQuestion();
         break;
+      case 'noteToggle':
+        noteOpen = !noteOpen;
+        renderXingce();
+        break;
+      case 'noteSave': {
+        var qn = xcList()[xc.i];
+        if (!qn) break;
+        var nv = ((document.getElementById('noteText') || {}).value || '').trim();
+        if (nv) S.notes['q:' + qn.id] = nv; else delete S.notes['q:' + qn.id];
+        save(); noteOpen = false; renderXingce(); toast('笔记已保存');
+        break;
+      }
+      case 'noteDel': {
+        var qd = xcList()[xc.i];
+        if (qd) delete S.notes['q:' + qd.id];
+        save(); noteOpen = false; renderXingce(); toast('笔记已删除');
+        break;
+      }
+      case 'printWrong':
+        printWrongBook();
+        break;
+      case 'newsExport':
+        exportNews();
+        break;
+      case 'eNoteToggle':
+        eNoteOpen = !eNoteOpen;
+        renderShenlun();
+        break;
+      case 'eNoteSave': {
+        var ev = ((document.getElementById('eNoteText') || {}).value || '').trim();
+        if (ev) S.notes['e:' + es.id] = ev; else delete S.notes['e:' + es.id];
+        save(); eNoteOpen = false; renderShenlun(); toast('笔记已保存');
+        break;
+      }
+      case 'eNoteDel':
+        delete S.notes['e:' + es.id];
+        save(); eNoteOpen = false; renderShenlun(); toast('笔记已删除');
+        break;
       case 'attrib': {
         var q = xcList()[xc.i];
         if (q && S.wrong[q.id]) {
@@ -1309,6 +1495,7 @@
         var qq = D.questions.filter(function (x) { return x.id === rid; })[0];
         xc.tab = 'practice';
         xc.mod = qq.mod;
+        xc.tag = qq.mod === '常识判断' ? qq.tag : null;
         xc.i = xcList().indexOf(qq);
         xc.picked = -1; xc.graded = false;
         renderXingce();
@@ -1515,6 +1702,20 @@
         ivSave();
         break;
 
+      /* --- 词库 --- */
+      case 'ciTab':
+        ci.tab = t.getAttribute('data-t');
+        ci.q = '';
+        renderCiku();
+        break;
+      case 'ciGo':
+        xc.tab = 'practice';
+        xc.mod = '常识判断';
+        xc.tag = t.getAttribute('data-t');
+        xc.i = 0; xc.picked = -1; xc.graded = false;
+        gotoView('xingce');
+        break;
+
       /* --- 数据 --- */
       case 'resetAll':
         if (confirm('清空全部练习记录？（不可恢复）')) {
@@ -1527,6 +1728,177 @@
         break;
     }
   });
+
+  /* 词库搜索输入（就地刷新，不丢焦点） */
+  document.getElementById('view').addEventListener('input', function (ev) {
+    var t = ev.target.closest('[data-act="ciq"]');
+    if (!t) return;
+    ci.q = t.value;
+    var holder = document.getElementById('ciHolder');
+    if (holder) holder.innerHTML = ciListHTML();
+  });
+
+  /* ============================================================
+     全局搜索
+     ============================================================ */
+  var gs = { q: '' };
+
+  function gsWords() {
+    return (gs.q || '').trim().split(/\s+/).filter(function (w) { return w; });
+  }
+
+  function gsMatch() {
+    var ws = gsWords();
+    return function (hay) {
+      return ws.every(function (w) { return hay.indexOf(w) >= 0; });
+    };
+  }
+
+  function gsHl(s) {
+    var ws = gsWords();
+    if (!ws.length) return esc(s);
+    var re = new RegExp(ws.map(function (w) {
+      return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }).join('|'), 'gi');
+    return esc(s).replace(re, function (m) { return '<em>' + m + '</em>'; });
+  }
+
+  function gsRow(ty, id, kind, title, desc) {
+    return '<div class="gs-row" data-act="gsGo" data-t="' + ty + '" data-id="' + esc(id) + '">' +
+      '<span class="k">' + esc(kind) + '</span>' +
+      '<span class="t">' + gsHl(title) + '</span>' +
+      '<span class="d">' + esc(desc || '') + '</span></div>';
+  }
+
+  function gsGroup(name, rows) {
+    return rows.length ? '<div class="gs-group"><div class="gs-gt">' + name + '</div>' + rows.join('') + '</div>' : '';
+  }
+
+  function gsRun() {
+    var body = document.getElementById('gsBody');
+    var inp = document.getElementById('gsInput');
+    if (!body || !inp) return;
+    gs.q = inp.value;
+    if (!gsWords().length) {
+      body.innerHTML = '<div class="gs-empty">输入关键词，全局搜：行测题目 · 申论题 · 时政素材 · 申论规范词 · 成语 · 实词。</div>';
+      return;
+    }
+    var m = gsMatch();
+    var html = '';
+
+    var qs = D.questions.filter(function (x) {
+      return x.opts && x.opts.length >= 2 && m((x.mod || '') + ' ' + (x.tag || '') + ' ' + (x.stem || ''));
+    }).slice(0, 8);
+    html += gsGroup('行测题目', qs.map(function (x) {
+      return gsRow('q', x.id, x.mod + ' · ' + (x.tag || ''), x.stem, '');
+    }));
+
+    var els = D.essays.filter(function (x) {
+      return m((x.type || '') + ' ' + (x.title || '') + ' ' + (x.q || '') + ' ' + (x.ask || ''));
+    }).slice(0, 5);
+    html += gsGroup('申论题', els.map(function (x) {
+      return gsRow('e', x.id, x.type, x.title || x.q, '');
+    }));
+
+    var ns = D.news.filter(function (x) {
+      return m((x.cat || '') + ' ' + (x.title || '') + ' ' + (x.body || '') + ' ' + (x.src || ''));
+    }).slice(0, 5);
+    html += gsGroup('时政素材', ns.map(function (x) {
+      return gsRow('n', x.title, x.cat, x.title, x.body.slice(0, 28));
+    }));
+
+    var nms = GV.norms.filter(function (x) { return m(x[0] + ' ' + x[1]); }).slice(0, 6);
+    html += gsGroup('申论规范词', nms.map(function (x) {
+      return gsRow('norm', x[0], '规范词', x[0], x[1]);
+    }));
+
+    var ids = GV.idioms.filter(function (x) { return m(x[0] + ' ' + x[1]); }).slice(0, 6);
+    html += gsGroup('成语', ids.map(function (x) {
+      return gsRow('idiom', x[0], '成语', x[0], x[1]);
+    }));
+
+    var wds = GV.words.filter(function (x) { return m(x[0] + ' ' + x[1] + ' ' + x[2]); }).slice(0, 6);
+    html += gsGroup('实词辨析', wds.map(function (x) {
+      return gsRow('word', x[0] + '|' + x[1], '实词', x[0] + ' / ' + x[1], x[2]);
+    }));
+
+    body.innerHTML = html || '<div class="gs-empty">没有找到与「' + esc(gs.q) + '」相关的内容，换个关键词试试。</div>';
+  }
+
+  function openSearch() {
+    var ov = document.getElementById('gsOverlay');
+    if (!ov) return;
+    ov.classList.add('on');
+    var inp = document.getElementById('gsInput');
+    inp.value = '';
+    gs.q = '';
+    gsRun();
+    setTimeout(function () { inp.focus(); }, 30);
+  }
+
+  function closeSearch() {
+    var ov = document.getElementById('gsOverlay');
+    if (ov) ov.classList.remove('on');
+  }
+
+  function gotoView(v) {
+    if ((location.hash || '#').slice(1) === v) go(v);
+    else location.hash = '#' + v;
+  }
+
+  function gsGoTo(t) {
+    var ty = t.getAttribute('data-t');
+    var id = t.getAttribute('data-id');
+    closeSearch();
+    if (ty === 'q') {
+      var qq = D.questions.filter(function (x) { return x.id === id; })[0];
+      if (!qq) return;
+      xc.tab = 'practice';
+      xc.mod = qq.mod;
+      xc.tag = qq.mod === '常识判断' ? qq.tag : null;
+      xc.i = Math.max(0, xcList().indexOf(qq));
+      xc.picked = -1; xc.graded = false;
+      gotoView('xingce');
+    } else if (ty === 'e') {
+      var ee = D.essays.filter(function (x) { return x.id === id; })[0];
+      if (!ee) return;
+      es.id = ee.id;
+      es.type = ee.type;
+      es.result = null;
+      es.text = '';
+      gotoView('shenlun');
+    } else if (ty === 'n') {
+      nz.q = id; nz.cat = '全部'; nz.limit = 36;
+      gotoView('shizheng');
+    } else if (ty === 'norm') {
+      ci.tab = 'norms'; ci.q = id;
+      gotoView('ciku');
+    } else if (ty === 'idiom') {
+      ci.tab = 'idioms'; ci.q = id;
+      gotoView('ciku');
+    } else if (ty === 'word') {
+      ci.tab = 'words'; ci.q = id.split('|')[0];
+      gotoView('ciku');
+    }
+  }
+
+  (function wireSearch() {
+    var sb = document.getElementById('searchBtn');
+    var ov = document.getElementById('gsOverlay');
+    if (!sb || !ov) return;
+    sb.addEventListener('click', openSearch);
+    document.getElementById('gsClose').addEventListener('click', closeSearch);
+    ov.addEventListener('click', function (ev) { if (ev.target === ov) closeSearch(); });
+    document.getElementById('gsInput').addEventListener('input', gsRun);
+    document.getElementById('gsBody').addEventListener('click', function (ev) {
+      var t = ev.target.closest('[data-act="gsGo"]');
+      if (!t) return;
+      gsGoTo(t);
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') closeSearch();
+    });
+  })();
 
   /* 导航 */
   document.getElementById('nav').addEventListener('click', function (ev) {
@@ -1541,6 +1913,22 @@
     var v = (location.hash || '#today').slice(1);
     go(v);
   });
+
+  /* 深浅色主题 */
+  function applyTheme() {
+    document.documentElement.setAttribute('data-theme', S.theme === 'dark' ? 'dark' : 'light');
+    var b = document.getElementById('themeBtn');
+    if (b) b.title = S.theme === 'dark' ? '切换浅色模式' : '切换深色模式';
+  }
+  var themeBtn = document.getElementById('themeBtn');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function () {
+      S.theme = S.theme === 'dark' ? 'light' : 'dark';
+      save();
+      applyTheme();
+    });
+  }
+  applyTheme();
 
   /* 启动 */
   (function boot() {
