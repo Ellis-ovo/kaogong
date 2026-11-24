@@ -74,7 +74,8 @@ window.MOCK = (function () {
     left: 0,
     started: 0,
     t: null,
-    res: null
+    res: null,
+    sheetOpen: false
   };
 
   function state() { return K().S; }
@@ -198,6 +199,96 @@ window.MOCK = (function () {
     };
   }
 
+
+  /* ---------------- 严格计时：考试状态写进 localStorage ----------------
+     刷新页面、切换视图都不停表；关掉再打开，只要还没到点就接着考，
+     到点了（哪怕人不在这个页面）也强制交卷。 */
+
+  function runSave() {
+    var S = state();
+    if (mk.phase !== 'run') { S.run = null; K().save(); return; }
+    S.run = {
+      name: cfg().name,
+      secs: cfg().secs,
+      t0: mk.started,
+      idx: mk.idx,
+      picks: mk.picks,
+      paperId: mk.paper ? mk.paper.id : null,
+      mode: mk.paper ? null : mk.mode,
+      mod: mk.mod,
+      qs: mk.qs
+    };
+    K().save();
+  }
+
+  function runClear() {
+    var S = state();
+    S.run = null;
+    K().save();
+  }
+
+  function leftSecs() {
+    if (!mk.started) return 0;
+    return Math.max(0, cfg().secs - Math.round((Date.now() - mk.started) / 1000));
+  }
+
+  /* 启动时尝试恢复未完成的考试；已超时的直接判卷 */
+  function resume() {
+    var S = state();
+    var r = S.run;
+    if (!r || !r.qs || !r.qs.length) return false;
+    mk.paper = r.paperId ? findPaper(r.paperId) : null;
+    if (!mk.paper && r.mode && MODES[r.mode]) mk.mode = r.mode;
+    mk.qs = r.qs;
+    mk.idx = Math.min(r.idx || 0, r.qs.length - 1);
+    mk.picks = r.picks || {};
+    mk.started = r.t0;
+    mk.phase = 'run';
+    mk.sheetOpen = false;
+    if (leftSecs() <= 0) { force('超时自动交卷'); return true; }
+    return true;
+  }
+
+  /* 到点强制收卷 */
+  function force(reason) {
+    if (mk.phase !== 'run') return;
+    submit(true, reason);
+    if (window.KG && window.KG.go) window.KG.go('mock');
+  }
+
+  /* 全局秒表：即使不在考试视图也在跑 */
+  function watch() {
+    if (mk.phase === 'run') {
+      mk.left = leftSecs();
+      var el = document.getElementById('mkTimer');
+      if (el) {
+        el.textContent = fmt(mk.left);
+        el.classList.toggle('warn', mk.left <= 300);
+      }
+      var el2 = document.getElementById('mkTimer2');
+      if (el2) el2.textContent = fmt(mk.left);
+      if (mk.left <= 0) force('时间到，已强制交卷');
+      return;
+    }
+    /* 视图不在模拟考试时，也可能有待考的卷子 */
+    var S = state();
+    if (S.run) {
+      var r = S.run;
+      var left = Math.max(0, r.secs - Math.round((Date.now() - r.t0) / 1000));
+      if (left <= 0) {
+        resume();
+        force('时间到，已强制交卷');
+      }
+    }
+  }
+
+  setInterval(watch, 1000);
+
+  /* 打开页面时若存在未完成的考试，接着考（或直接判卷） */
+  setTimeout(function () {
+    try { resume(); } catch (e) { /* 忽略 */ }
+  }, 0);
+
   /* ---------------- 计时 ---------------- */
 
   function tick() {
@@ -223,7 +314,7 @@ window.MOCK = (function () {
   /* ---------------- 渲染 ---------------- */
 
   function render() {
-    if (mk.phase === 'run') return viewRun();
+    if (mk.phase === 'run') return viewRun() + (mk.sheetOpen ? sheetModal() : '');
     if (mk.phase === 'done') return viewDone();
     return viewIdle();
   }
@@ -410,14 +501,57 @@ window.MOCK = (function () {
           '<span class="small muted">已答 ' + done + ' / ' + mk.qs.length + '</span>' +
         '</div>' +
       '</div>' +
-      '<div class="card mk-sheet">' +
-        '<div class="card-h"><h2>答题卡</h2><span class="hint">' + esc(c.name) + '</span></div>' +
-        sheet +
-        '<div class="divider"></div>' +
-        '<button class="btn ghost sm" data-act="mkSubmit" style="width:100%">交卷</button>' +
-        '<div class="small muted" style="margin-top:8px;line-height:1.7">交卷后按模块折算百分制，并给出每题解析。</div>' +
+      '<div class="mk-side">' +
+        '<div class="card mk-clock">' +
+          '<div class="small muted">剩余时间</div>' +
+          '<div class="mk-bigtime' + (mk.left <= 300 ? ' warn' : '') + '" id="mkTimer2">' + fmt(mk.left) + '</div>' +
+          '<div class="mk-stat"><span>已答</span><b>' + done + ' / ' + mk.qs.length + '</b></div>' +
+          '<div class="mk-stat"><span>未答</span><b class="' + (mk.qs.length - done ? 'warn' : '') + '">' + (mk.qs.length - done) + ' 题</b></div>' +
+          '<button class="btn sm" data-act="mkSheet" style="width:100%;margin-top:12px">填涂答题卡</button>' +
+          '<button class="btn ghost sm" data-act="mkSubmit" style="width:100%;margin-top:8px">交卷</button>' +
+          '<div class="small muted" style="margin-top:10px;line-height:1.7">严格计时：离开页面、刷新都不会停表，时间到自动收卷。</div>' +
+        '</div>' +
+        '<div class="card mk-sheet">' +
+          '<div class="card-h"><h2>题号</h2><span class="hint">点击跳转</span></div>' +
+          sheet +
+        '</div>' +
       '</div>' +
     '</div>';
+  }
+
+
+  /* 机读卡式填涂：每行一题，A B C D 四个气泡，点一下涂黑 */
+  function sheetModal() {
+    var done = Object.keys(mk.picks).length;
+    var order = modOrder();
+    var body = order.map(function (mod, gi) {
+      var idxs = [];
+      mk.qs.forEach(function (x, k) { if (x.mod === mod) idxs.push(k); });
+      var rows = idxs.map(function (k) {
+        var q = mk.qs[k];
+        var pick = mk.picks[q.id];
+        var bub = 'ABCD'.split('').map(function (ch, oi) {
+          return '<button class="bb' + (pick === oi ? ' on' : '') + '" data-act="mkFill" data-q="' + esc(q.id) + '" data-o="' + oi + '">' + ch + '</button>';
+        }).join('');
+        return '<div class="fill-row' + (pick === undefined ? ' blank' : '') + '">' +
+          '<button class="fill-no" data-act="mkGo" data-i="' + k + '">' + (k + 1) + '</button>' +
+          '<span class="bbs">' + bub + '</span></div>';
+      }).join('');
+      return '<div class="fill-part"><div class="fill-pt">' + CN[gi] + '、' + esc(mod) +
+        '　<span>' + idxs.length + ' 题</span></div><div class="fill-grid">' + rows + '</div></div>';
+    }).join('');
+
+    return '<div class="mk-overlay" data-act="mkSheetCloseBg">' +
+      '<div class="mk-card">' +
+        '<div class="mk-card-h"><b>答题卡</b><span>' + esc(cfg().name) + ' · 已答 ' + done + ' / ' + mk.qs.length + '</span>' +
+          '<button class="btn ghost sm" data-act="mkSheetClose">收起</button></div>' +
+        '<div class="mk-card-b">' + body + '</div>' +
+        '<div class="mk-card-f">' +
+          '<span class="small muted">点题号跳到那一题，点字母填涂；再点同一个字母取消。</span>' +
+          '<div class="spacer"></div>' +
+          '<button class="btn sm" data-act="mkSubmit">交卷</button>' +
+        '</div>' +
+      '</div></div>';
   }
 
   function viewDone() {
@@ -439,10 +573,16 @@ window.MOCK = (function () {
         '<div class="exp"><b>解析</b>' + esc(it.q.exp || '暂无解析') + '</div></div>';
     }).join('');
 
+    var autoBar = r.auto
+      ? '<div class="mk-autobar">' + esc(r.reason || '时间到，已强制交卷') +
+        '　·　未作答的题按错误计分</div>'
+      : '';
+
     return '<div class="tool-line"><h2>考试成绩</h2>' +
         '<span class="sub">' + esc(r.name) + ' · ' + r.correct + '/' + r.total + ' 题 · 用时 ' + fmt(r.used) + '</span>' +
         '<div class="spacer"></div>' +
         '<button class="btn" data-act="mkRestart">再考一次</button></div>' +
+      autoBar +
 
       '<div class="mk-result">' +
         '<div class="card mk-score"><div class="sc ' + cls + '">' + r.score + '</div>' +
@@ -491,8 +631,11 @@ window.MOCK = (function () {
     mk.idx = 0;
     mk.picks = {};
     mk.res = null;
+    mk.sheetOpen = false;
     mk.phase = 'run';
+    mk.left = cfg().secs;
     startTimer();
+    runSave();
     paint();
   }
 
@@ -500,10 +643,10 @@ window.MOCK = (function () {
     K().mount(MOCK.render());
   }
 
-  function submit(auto) {
+  function submit(auto, reason) {
     if (mk.phase !== 'run') return;
     stopTimer();
-    var used = Math.round((Date.now() - mk.started) / 1000);
+    var used = Math.min(cfg().secs, Math.round((Date.now() - mk.started) / 1000));
     var items = mk.qs.map(function (q, i) {
       var pick = mk.picks[q.id];
       return { i: i, q: q, pick: pick === undefined ? -1 : pick, ok: pick === q.ans };
@@ -535,10 +678,14 @@ window.MOCK = (function () {
       score: score,
       rate: Math.round(correct / items.length * 100),
       used: used,
+      auto: !!auto,
+      reason: reason || (auto ? '时间到，已自动交卷' : ''),
       mods: mods,
       items: items
     };
     mk.phase = 'done';
+    mk.sheetOpen = false;
+    runClear();
 
     var S = state();
     S.mock = S.mock || [];
@@ -552,7 +699,7 @@ window.MOCK = (function () {
     });
     K().save();
     paint();
-    if (auto) K().toast('时间到，已自动交卷');
+    if (auto) K().toast(reason || '时间到，已自动交卷');
   }
 
   /* 导入：接受数组或 {name, mins, questions} */
@@ -630,12 +777,41 @@ window.MOCK = (function () {
       var q = mk.qs[mk.idx];
       mk.picks[q.id] = +t.getAttribute('data-i');
       if (mk.idx < mk.qs.length - 1) mk.idx++;
+      runSave();
       paint();
       return;
     }
-    if (act === 'mkNext') { if (mk.idx < mk.qs.length - 1) mk.idx++; paint(); return; }
-    if (act === 'mkPrev') { if (mk.idx > 0) mk.idx--; paint(); return; }
-    if (act === 'mkGo') { mk.idx = +t.getAttribute('data-i'); paint(); return; }
+    if (act === 'mkSheet') { mk.sheetOpen = true; paint(); return; }
+    if (act === 'mkSheetClose') { mk.sheetOpen = false; paint(); return; }
+    if (act === 'mkSheetCloseBg') {
+      if (ev.target === t) { mk.sheetOpen = false; paint(); }
+      return;
+    }
+    if (act === 'mkFill') {
+      var qid = t.getAttribute('data-q');
+      var oi = +t.getAttribute('data-o');
+      if (mk.picks[qid] === oi) delete mk.picks[qid];
+      else mk.picks[qid] = oi;
+      runSave();
+      /* 就地更新，不整页重绘：否则涂 135 题时卡片会一直跳回顶部 */
+      var row = t.closest('.fill-row');
+      if (row) {
+        var bbs = row.querySelectorAll('.bb');
+        for (var bi = 0; bi < bbs.length; bi++) {
+          bbs[bi].classList.toggle('on', +bbs[bi].getAttribute('data-o') === mk.picks[qid]);
+        }
+        row.classList.toggle('blank', mk.picks[qid] === undefined);
+      }
+      var cnt = document.querySelector('.mk-card-h span');
+      if (cnt) {
+        var head = cnt.textContent || '';
+        cnt.textContent = head.replace(/已答 \d+ \/ \d+/, '已答 ' + Object.keys(mk.picks).length + ' / ' + mk.qs.length);
+      }
+      return;
+    }
+    if (act === 'mkNext') { if (mk.idx < mk.qs.length - 1) mk.idx++; runSave(); paint(); return; }
+    if (act === 'mkPrev') { if (mk.idx > 0) mk.idx--; runSave(); paint(); return; }
+    if (act === 'mkGo') { mk.idx = +t.getAttribute('data-i'); mk.sheetOpen = false; runSave(); paint(); return; }
     if (act === 'mkSubmit') {
       var done = Object.keys(mk.picks).length;
       var rest = mk.qs.length - done;
