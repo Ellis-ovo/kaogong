@@ -225,7 +225,7 @@
   /* ============================================================
      行测
      ============================================================ */
-  var xc = { mod: '全部', i: 0, picked: -1, graded: false, tab: 'practice', attrib: null, tag: null };
+  var xc = { mod: '全部', i: 0, picked: -1, graded: false, tab: 'practice', attrib: null, tag: null, kind: 'all' };
   var noteOpen = false;
   var bankOpen = false, bankMsg = '';
 
@@ -233,6 +233,8 @@
     var pool = D.questions.filter(function (q) { return q.opts && q.opts.length >= 2 && q.ans >= 0; });
     if (xc.mod !== '全部') pool = pool.filter(function (q) { return q.mod === xc.mod; });
     if (xc.tag) pool = pool.filter(function (q) { return q.tag === xc.tag; });
+    if (xc.kind === 'zt') pool = pool.filter(function (q) { return q.zt; });
+    else if (xc.kind === 'mock') pool = pool.filter(function (q) { return !q.zt; });
     return pool;
   }
 
@@ -384,6 +386,11 @@
       '<span class="sub">共 ' + QCOUNT + ' 道 · 已做 ' + Object.keys(S.answers).length + ' 道</span>' +
       '<div class="spacer"></div>' +
       '<button class="btn ghost sm" data-act="bankOpen">导入真题</button>' +
+      '<div class="seg">' +
+        '<button class="' + (xc.kind === 'all' ? 'on' : '') + '" data-act="xckind" data-k="all">全部</button>' +
+        '<button class="' + (xc.kind === 'zt' ? 'on' : '') + '" data-act="xckind" data-k="zt">真题</button>' +
+        '<button class="' + (xc.kind === 'mock' ? 'on' : '') + '" data-act="xckind" data-k="mock">模拟</button>' +
+      '</div>' +
       '<div class="seg">' +
         '<button class="' + (xc.tab === 'practice' ? 'on' : '') + '" data-act="xctab" data-t="practice">练习</button>' +
         '<button class="' + (xc.tab === 'wrong' ? 'on' : '') + '" data-act="xctab" data-t="wrong">错题本 ' + Object.keys(S.wrong).length + '</button>' +
@@ -1570,6 +1577,12 @@
       case 'resetq':
         resetQuestion();
         break;
+      case 'xckind': {
+        xc.kind = t.getAttribute('data-k') || 'all';
+        xc.i = 0; xc.picked = -1; xc.graded = false;
+        renderXingce();
+        break;
+      }
       case 'bankOpen':
         bankOpen = true; bankMsg = '';
         renderXingce();
