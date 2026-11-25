@@ -158,6 +158,11 @@
       render();
     });
     goBtn.addEventListener('click', render);
+    var liveTimer;
+    ta.addEventListener('input', function () {
+      clearTimeout(liveTimer);
+      liveTimer = setTimeout(render, 260);
+    });
     ta.addEventListener('keydown', function (e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); render(); }
     });
@@ -169,4 +174,56 @@
     });
     render();
   }
+})();
+
+
+/* ---------- 首屏「今日」窗口：真实日期 + 今日高亮 + 点任务联动完成度 ---------- */
+(function () {
+  var win = document.querySelector('.win');
+  if (!win) return;
+
+  var WD = ['日', '一', '二', '三', '四', '五', '六'];
+  var d = new Date();
+  var hd = win.querySelector('#winDate');
+  if (hd) hd.textContent = (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 · 周' + WD[d.getDay()];
+
+  var chart = win.querySelector('#heroChart');
+  if (chart) {
+    var today = d.getDay() || 7;
+    [].forEach.call(chart.children, function (c, i) { c.classList.toggle('hot', i + 1 === today); });
+  }
+
+  var ring = win.querySelector('.ring');
+  var ringB = ring && ring.querySelector('b');
+  var tasks = [].slice.call(win.querySelectorAll('.task'));
+  var orig = tasks.map(function (t) { return t.querySelector('.n').textContent.trim(); });
+
+  function frac(txt) {
+    var m = /^(\d+)\s*\/\s*(\d+)$/.exec(txt);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }
+
+  function draw() {
+    var sum = 0;
+    tasks.forEach(function (t, i) {
+      var f = frac(orig[i]);
+      var p = t.classList.contains('done') ? 100 : (f && f[1] ? Math.round(f[0] / f[1] * 100) : 100);
+      var bar = t.querySelector('.bar i');
+      if (bar) bar.style.width = p + '%';
+      var nEl = t.querySelector('.n');
+      if (nEl) nEl.textContent = p === 100 && f ? f[1] + '/' + f[1] : orig[i];
+      sum += p;
+    });
+    var pct = tasks.length ? Math.round(sum / tasks.length) : 0;
+    if (ring) ring.style.setProperty('--p', pct);
+    if (ringB) ringB.innerHTML = pct + '<span>%</span>';
+  }
+
+  tasks.forEach(function (t) {
+    t.addEventListener('click', function () {
+      t.classList.toggle('done');
+      draw();
+    });
+  });
+  draw();
 })();
