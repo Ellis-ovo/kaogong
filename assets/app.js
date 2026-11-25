@@ -227,3 +227,111 @@
   });
   draw();
 })();
+
+
+/* ---------- 滚动进度 / 章节导航 / 回到顶部 ---------- */
+(function () {
+  function init() {
+  var sp = document.querySelector('#sp i');
+  var rail = document.getElementById('dotnav');
+  var top = document.getElementById('toTop');
+  var links = rail ? [].slice.call(rail.querySelectorAll('a')) : [];
+  var secs = links.map(function (a) { return document.getElementById(a.dataset.sec); });
+
+  function onScroll() {
+    var y = window.pageYOffset || document.documentElement.scrollTop;
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    if (sp) sp.style.width = (h > 0 ? Math.min(100, y / h * 100) : 0) + '%';
+    if (top) top.classList.toggle('on', y > 520);
+
+    var line = y + window.innerHeight * 0.34;
+    var active = -1;
+    secs.forEach(function (s, i) {
+      if (s && s.offsetTop <= line) active = i;
+    });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === active); });
+  }
+
+  var tick = false;
+  window.addEventListener('scroll', function () {
+    if (tick) return;
+    tick = true;
+    requestAnimationFrame(function () { tick = false; onScroll(); });
+  }, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+
+  if (top) {
+    top.addEventListener('click', function () {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+
+/* ---------- 30 秒小测评 ---------- */
+(function () {
+  var box = document.querySelector('#quiz');
+  if (!box) return;
+  var cards = [].slice.call(box.querySelectorAll('.quiz-card'));
+  var out = box.querySelector('#quizOut');
+  var ans = {};
+
+  function render() {
+    var pri = {
+      xc: ['行测', '先补判断推理和资料分析：这两块提分最快，也最容易被「做得慢」拖住总分。'],
+      sl: ['申论', '先补申论：你缺的不是观点，是「把话写成规范表述」这一步，先用口语规范化工具改 20 句找手感。'],
+      ms: ['面试', '先补面试：开口比背模板重要，每天 2 题计时作答，说完自己回听一遍。'],
+      jh: ['计划', '先补计划：你多半是「按理想的一天排」，改成每天 90 分钟硬指标，没完成自动顺延。']
+    }[ans[1]] || ['行测', ''];
+
+    var score = {
+      low: '基础还没打牢：每天 40 题，先言语和判断，错题当天归因，一周只练两个模块。',
+      mid: '到了瓶颈期：每天 50–60 题，错题当天归因，每周一次 40 题限时，专练资料分析。',
+      high: '分数够了，缺速度：主打限时套练，资料分析一题不超过 90 秒，数量关系挑会做的做。',
+      none: '先摸底：去做一次 20 题小测，系统按结果给你排，比拍脑袋定计划准。'
+    }[ans[2]] || '';
+
+    var time = {
+      near: '3 个月内：两周一次整套限时，其余时间全给短板，别再平均用力。',
+      half: '3–6 个月：前两个月补短板，第三个月开始整套限时，一周一套。',
+      far: '6 个月以上：先把五模块过一遍，再谈提速，别急着刷套卷。',
+      undecided: '还没定岗：先按国考地市级练（最通用），定岗后只换真题卷不换练法。'
+    }[ans[3]] || '';
+
+    out.hidden = false;
+    out.innerHTML =
+      '<h5>你的起手配比</h5>' +
+      '<p class="qr-line"><b>先补：</b><em>' + pri[0] + '</em>　' + pri[1] + '</p>' +
+      '<p class="qr-line"><b>行测节奏：</b>' + score + '</p>' +
+      '<p class="qr-line"><b>时间安排：</b>' + time + '</p>' +
+      '<div class="pill-row">' +
+        '<a class="pill pill--blue" href="app.html#today">按这个配比开始</a>' +
+        '<button class="qr-again" type="button">重新测</button>' +
+      '</div>';
+    out.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    var again = out.querySelector('.qr-again');
+    if (again) again.addEventListener('click', reset);
+  }
+
+  function reset() {
+    ans = {};
+    [].forEach.call(box.querySelectorAll('.quiz-opts button'), function (b) { b.classList.remove('on'); });
+    out.hidden = true;
+    out.innerHTML = '';
+    box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+  cards.forEach(function (card, i) {
+    card.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b || !card.contains(b)) return;
+      [].forEach.call(card.querySelectorAll('button'), function (x) { x.classList.toggle('on', x === b); });
+      ans[i + 1] = b.dataset.v;
+      if (ans[1] && ans[2] && ans[3]) render();
+    });
+  });
+})();
