@@ -20,15 +20,15 @@
         <div class="menu">
           <div class="col">
             <h6>四个模块</h6>
-            <a href="app.html#xingce">行测 · 智能刷题<span>5154 道题，按考点归因</span></a>
-            <a href="app.html#shenlun">申论 · 批改与表达<span>采分点评分，逐句标注</span></a>
-            <a href="app.html#shizheng">时政 · 每日素材<span>8 类主题，可一键引用</span></a>
-            <a href="app.html#mianshi">面试 · AI 陪练<span>全流程模拟与追问</span></a>
+            <a href="#xingce">行测 · 智能刷题<span>5154 道题，按考点归因</span></a>
+            <a href="#shenlun">申论 · 批改与表达<span>采分点评分，逐句标注</span></a>
+            <a href="#shizheng">时政 · 每日素材<span>8 类主题，可一键引用</span></a>
+            <a href="#mianshi">面试 · AI 陪练<span>全流程模拟与追问</span></a>
           </div>
           <div class="col">
             <h6>用得最多</h6>
             <a href="#demo">申论口语规范化<span>把大白话翻成能落笔的句子</span></a>
-            <a href="app.html#today">学习计划<span>今天该做什么，系统排</span></a>
+            <a href="#plan">学习计划<span>今天该做什么，系统排</span></a>
           </div>
         </div>
       </div>
@@ -38,7 +38,7 @@
         <div class="menu">
           <div class="col">
             <h6>进度</h6>
-            <a href="app.html#today">每日任务与排期<span>按备考进度自动调</span></a>
+            <a href="#plan">每日任务与排期<span>按备考进度自动调</span></a>
             <a href="app.html#today">考点掌握度<span>哪些还没过，一眼看清</span></a>
           </div>
           <div class="col">
@@ -74,6 +74,8 @@
   </div>
 </header>
 
+<div class="sp" id="sp" aria-hidden="true"><i></i></div>
+
 <div class="mobile-menu" id="mobileMenu">
   <div class="grp">
     <h6>产品</h6>
@@ -98,7 +100,7 @@
     <p class="lede reveal" style="--d:160ms"><strong>行测、申论、时政、面试，一套系统练完。</strong>四个模块共用一条进度线，今天该练什么系统说了算——备考不是堆资料的体力活，是一门一门地过，少走弯路。</p>
     <div class="pill-row reveal" style="--d:240ms">
       <a class="pill pill--blue" href="app.html#today">开始备考</a>
-      <a class="pill pill--ghost" href="#demo">试试申论工具</a>
+      <a class="pill pill--ghost" href="#quiz">30 秒测弱点</a>
     </div>
 
     <div class="hero-visual reveal" style="--d:320ms">
@@ -192,6 +194,51 @@
   </div>
 </section>
 
+<!-- ================= 小测评 ================= -->
+<section class="sec sec--gray" id="quiz">
+  <div class="sec-inner sec-inner--narrow">
+    <div class="center">
+      <p class="eyebrow reveal">30 秒小测评</p>
+      <h2 class="display display--sm reveal" style="--d:60ms">先搞清楚，<br>你该先补哪一块。</h2>
+      <p class="lede reveal" style="--d:120ms">三道题，不用登录、不留手机号。答完直接给你一份起手配比。</p>
+    </div>
+
+    <div class="quiz-wrap reveal" style="--d:160ms">
+      <div class="quiz-card">
+        <h5><i>1</i>现在最卡你的是哪一步？</h5>
+        <div class="quiz-opts">
+          <button type="button" data-v="xc">行测做不快，正确率还浮</button>
+          <button type="button" data-v="sl">申论心里有数，写不成句</button>
+          <button type="button" data-v="ms">面试开不了口，一紧张就乱</button>
+          <button type="button" data-v="jh">计划立不住，三天两头断</button>
+        </div>
+      </div>
+
+      <div class="quiz-card">
+        <h5><i>2</i>最近一次自测，行测大概在？</h5>
+        <div class="quiz-opts">
+          <button type="button" data-v="low">60 分以下</button>
+          <button type="button" data-v="mid">60–70 分</button>
+          <button type="button" data-v="high">70 分以上</button>
+          <button type="button" data-v="none">没测过</button>
+        </div>
+      </div>
+
+      <div class="quiz-card">
+        <h5><i>3</i>距你打算考的那场，还有多久？</h5>
+        <div class="quiz-opts">
+          <button type="button" data-v="near">3 个月以内</button>
+          <button type="button" data-v="half">3–6 个月</button>
+          <button type="button" data-v="far">6 个月以上</button>
+          <button type="button" data-v="undecided">还没定</button>
+        </div>
+      </div>
+
+      <div class="quiz-out" id="quizOut" hidden></div>
+    </div>
+  </div>
+</section>
+
 <!-- ================= 行测 ================= -->
 <section class="sec sec--dark" id="xingce">
   <div class="sec-inner">
@@ -199,7 +246,7 @@
       <div>
         <p class="eyebrow reveal">行测 · 智能刷题</p>
         <h2 class="display display--sm reveal" style="--d:60ms">错题不是再做一遍，<br>是追到为什么错。</h2>
-        <p class="copy reveal" style="--d:120ms">系统把每道错题拆成 <strong>知识盲区、审题偏差、计算失误</strong> 三类——说白了：<strong>知识盲区</strong>是这个考点你压根没学会，得回去补课；<strong>审题偏差</strong>是知识点会，但看错了问法（把「不正确」看成「正确」）；<strong>计算失误</strong>是会做，但算错、抄错、时间不够。三类对应三种练法，第二天同类题自动回到练习里。</p>
+        <p class="copy reveal" style="--d:120ms">系统把每道错题拆成 <strong>知识盲区、审题偏差、计算失误</strong> 三类——说白了：<strong>知识盲区</strong>是这个考点你压根没学会，得回去补课；<strong>审题偏差</strong>是知识点会，但看错了问法（把「不正确」看成「正确」）；<strong>计算失误</strong>是会做，但算错、抄错、时间不够。三类对应三种练法，第二天同类题自动回到练习里。考点按国考、省考共用的一套归因，副省级、地市级、联考，以及江苏、浙江、广东的卷面结构都能对上。</p>
         <ul class="feat-list">
           <li class="reveal" style="--d:180ms"><span><b>按考点而非按套卷</b>5154 道题拆成 5 大模块，按考点归因后弱项单独练，不再整套卷地刷。</span></li>
           <li class="reveal" style="--d:230ms"><span><b>智能组卷</b>按当前掌握度配比，简单题不浪费时间，难题不打击信心。</span></li>
@@ -328,10 +375,12 @@
     </div>
 
     <div class="stat-row">
-      <div class="stat reveal" style="--d:60ms"><b>32</b><span>类主题，覆盖申论高频命题方向</span></div>
+      <div class="stat reveal" style="--d:60ms"><b>8</b><span>类主题，覆盖申论高频命题方向</span></div>
       <div class="stat reveal" style="--d:130ms"><b>8</b><span>条／天，通勤路上刷完</span></div>
-      <div class="stat reveal" style="--d:200ms"><b>1</b><span>键引用到作文素材本</span></div>
+      <div class="stat reveal" style="--d:200ms"><b>1</b><span>键复制成可粘贴的段落</span></div>
     </div>
+
+    <p class="share-note reveal" style="--d:260ms"><b>怎么用：</b>每张卡片都能一键复制成「事实 + 提法 + 可用角度 + 来源」四行，粘进 Word、笔记或微信里就能直接引；整组素材也可以导出成 txt，方便打包发给同学。</p>
   </div>
 </section>
 
@@ -417,8 +466,50 @@
   </div>
 </section>
 
+<!-- ================= FAQ ================= -->
+<section class="sec" id="faq">
+  <div class="sec-inner sec-inner--narrow">
+    <div class="center">
+      <p class="eyebrow reveal">常见问题</p>
+      <h2 class="display display--sm reveal" style="--d:60ms">你可能还想问的。</h2>
+    </div>
+
+    <div class="faq reveal" style="--d:140ms">
+      <details open>
+        <summary>免费版和系统班，最大区别是什么？</summary>
+        <div class="fa"><p>这个站点<b>目前没有任何付费版本，也没有系统班</b>——所有模块免费开放，没有试用期、没有二次收费的入口。区别只在于「谁给你改」：机器按采分点自查是免费的，真人逐句批改是现在不提供的。</p><p>如果以后上线带人工批改或一对一答疑的服务，会在页面顶部提前公示，不会做了再收费。</p></div>
+      </details>
+
+      <details>
+        <summary>暂停有效期怎么算？</summary>
+        <div class="fa"><p>没有会员期，所以也没有「暂停」这一步——不用续费，也不会因为几天没学就掉权益。</p><p>学习进度存在你自己这台电脑或手机的浏览器里（localStorage），不清缓存、不换设备就一直都在。换设备或清缓存会丢，所以重要数据建议在「错题本」里打印或导出留一份。</p></div>
+      </details>
+
+      <details>
+        <summary>申论 AI 批改和真人批改，差在哪？</summary>
+        <div class="fa"><p>机器批改是对着采分点做<b>要点核对</b>：关键词漏没漏、口语化改没改、字数够不够、条理分没分。这几项它比人快，也不会累。</p><p>它读不出的是<b>论证成不成立</b>——观点和材料对不对得上、段与段是不是层层推进、这句对策到底能不能落地。这三点还是得真人看。所以建议：先用它把格式和要点扫干净，再找人专门看骨架。</p></div>
+      </details>
+
+      <details>
+        <summary>只备考国考，还是也能用来准备省考？</summary>
+        <div class="fa"><p><b>省考同样适用。</b>行测五个模块（言语、判断、数量、资料、常识）国考省考考的是同一套考点，题库就是按这套考点归因的；真题卷内置了国考副省级、地市级、联考，以及江苏、浙江、广东六种卷面结构。</p><p>需要注意的差异：各省题型数量和侧重不一样（比如江苏的数量关系、浙江常识的时政比重）。练的时候以本省真题为准，把这个系统当「专项训练 + 进度管理」用，别把它当押题。</p></div>
+      </details>
+
+      <details>
+        <summary>素材和笔记能分享给别人吗？</summary>
+        <div class="fa"><p>可以。每条时政素材能一键复制成文字段落，粘到微信、文档里都行；整组素材支持导出 txt。申论范文、错题本可以打印成 PDF 或纸面，直接给同学看。</p><p>笔记是跟着题目存在本机的，不会上传，也不会自动同步给别人——想分享就把复制出来的文字发出去。</p></div>
+      </details>
+
+      <details>
+        <summary>要不要注册账号？数据会上传吗？</summary>
+        <div class="fa"><p>不需要注册。整个站点是纯静态页面，没有服务器，成绩、笔记、收藏都只在你自己浏览器里。</p><p>代价是：换浏览器、换设备、清缓存，数据不会跟着走。适合一个人安安静静刷题，不适合多端同步。</p></div>
+      </details>
+    </div>
+  </div>
+</section>
+
 <!-- ================= CTA ================= -->
-<section class="sec cta-band">
+<section class="sec cta-band" id="cta">
   <div class="sec-inner sec-inner--narrow">
     <h2 class="display reveal">今天的 90 分钟，<br>决定查分那天的结果。</h2>
     <p class="lede reveal" style="--d:100ms">先做一套 20 题的小测，系统会告诉你从哪儿开始。</p>
@@ -469,7 +560,24 @@
   </div>
 </footer>
 
+<nav class="dotnav" id="dotnav" aria-label="页面章节导航">
+  <a href="#pain" data-sec="pain" aria-label="痛点"><i></i><span>痛点</span></a>
+  <a href="#quiz" data-sec="quiz" aria-label="测评"><i></i><span>测评</span></a>
+  <a href="#xingce" data-sec="xingce" aria-label="行测"><i></i><span>行测</span></a>
+  <a href="#shenlun" data-sec="shenlun" aria-label="申论"><i></i><span>申论</span></a>
+  <a href="#shizheng" data-sec="shizheng" aria-label="时政"><i></i><span>时政</span></a>
+  <a href="#mianshi" data-sec="mianshi" aria-label="面试"><i></i><span>面试</span></a>
+  <a href="#plan" data-sec="plan" aria-label="计划"><i></i><span>计划</span></a>
+  <a href="#faq" data-sec="faq" aria-label="问答"><i></i><span>问答</span></a>
+  <a href="#cta" data-sec="cta" aria-label="开始"><i></i><span>开始</span></a>
+</nav>
+
+<button class="to-top" id="toTop" type="button" aria-label="回到顶部">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>
+</button>
+
 <script src="assets/engine.js"></script>
 <script src="assets/app.js"></script>
+
 </body>
 </html>
