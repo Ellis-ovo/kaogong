@@ -1007,3 +1007,18 @@ html[data-theme="dark"] .ci-q{background:var(--card)}
 .note-text{width:100%;box-sizing:border-box;min-height:76px;border:1px solid var(--line-2);border-radius:9px;padding:10px 12px;font-size:13px;font-family:var(--serif);line-height:1.7;background:var(--bg);color:var(--ink);resize:vertical;outline:none}
 .note-text:focus{border-color:var(--blue)}
 .note-f{display:flex;gap:8px;margin-top:8px}
+
+/* ---------- 本地真题导入 ---------- */
+.bank-box{border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px;background:var(--card)}
+.bank-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bank-h b{font-size:15px}
+.bank-tip{font-size:12.5px;color:var(--ink-3);line-height:1.75;margin:0 0 10px}
+.bank-tip b{color:var(--ink-2)}
+.bank-src{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;margin-bottom:8px;background:var(--card);color:var(--ink)}
+.bank-text{width:100%;min-height:150px;border:1px solid var(--line);border-radius:9px;padding:11px 12px;font-size:13px;line-height:1.7;font-family:inherit;resize:vertical;background:var(--card);color:var(--ink)}
+.bank-src:focus,.bank-text:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(0,113,227,.1)}
+.bank-msg{margin-top:8px;font-size:12.5px;color:var(--blue)}
+.bank-f{display:flex;align-items:center;gap:10px;margin-top:10px}
+.tag.src{background:transparent;border:1px dashed var(--line);color:var(--ink-3);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-theme="dark"] .bank-box{border-color:#2a3038}
+html[data-theme="dark"] .bank-src,html[data-theme="dark"] .bank-text{background:#12151a;border-color:#2a3038;color:#e7e9ee}
