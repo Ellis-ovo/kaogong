@@ -10,7 +10,7 @@
   D.__genDone = true;
 
   var JOBS = [
-    { g: window.GEN_SHULIANG, n: 1200, seed: 20270101 },
+    { g: window.GEN_SHULIANG, n: 3000, seed: 20270101 },
     { g: window.GEN_ZILIAO, n: 900, seed: 20270102 },
     { g: window.GEN_PANDUAN, n: 1200, seed: 20270103 },
     { g: window.GEN_YANYU, n: 900, seed: 20270104 },
