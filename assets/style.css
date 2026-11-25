@@ -251,7 +251,10 @@ button{font-family:inherit; cursor:pointer}
 .scroll-cue{
   margin:56px auto 0; display:flex; flex-direction:column; align-items:center; gap:8px;
   font-size:11.5px; color:var(--ink-3); letter-spacing:.14em; text-transform:uppercase;
+  text-decoration:none; cursor:pointer; transition:color .2s var(--ease);
 }
+.scroll-cue:hover{color:var(--ink)}
+.scroll-cue:hover span{background:linear-gradient(var(--ink-2),transparent)}
 .scroll-cue span{
   width:1px; height:26px; background:linear-gradient(var(--line),transparent);
   animation:cue 2.2s var(--ease) infinite;
@@ -436,9 +439,17 @@ button{font-family:inherit; cursor:pointer}
   display:grid; place-items:center; font-size:9.5px; color:var(--ink-2); letter-spacing:0;
 }
 #slIn{
-  width:100%; min-height:124px; resize:vertical;
-  border:0; padding:0; outline:none; background:transparent;
-  font-family:var(--serif); font-size:17px; line-height:1.85; color:var(--ink);
+  width:100%; min-height:132px; resize:vertical;
+  border:1px solid rgba(0,0,0,.14); border-radius:12px;
+  padding:14px 16px; background:#fff; cursor:text;
+  font-family:var(--serif); font-size:16.5px; line-height:1.85; color:var(--ink);
+  transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+#slIn:hover{border-color:rgba(0,0,0,.28)}
+#slIn:focus{border-color:var(--blue); box-shadow:0 0 0 4px rgba(0,113,227,.12); outline:none}
+.demo-hint{
+  margin-left:auto; font-style:normal; font-size:11px; color:var(--blue);
+  letter-spacing:0; text-transform:none;
 }
 #slIn::placeholder{color:#b9bcc4}
 .demo-row{display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap}
@@ -645,3 +656,27 @@ button{font-family:inherit; cursor:pointer}
   .reveal{opacity:1; transform:none; transition:none}
   .marquee-track,.scroll-cue span,.wave i{animation:none}
 }
+
+
+/* ---------------- 痛点共鸣 ---------------- */
+#pain{padding-top:clamp(64px,8vw,110px)}
+.pain-grid{
+  margin-top:clamp(34px,4.2vw,54px);
+  display:grid; grid-template-columns:repeat(3,1fr); gap:16px;
+}
+.pain{
+  background:var(--white); border:1px solid var(--line-soft); border-radius:16px;
+  padding:22px 22px 20px; text-align:left;
+  transition:transform .35s var(--ease), box-shadow .35s var(--ease);
+}
+.pain:hover{transform:translateY(-3px); box-shadow:0 18px 40px -26px rgba(0,0,0,.28)}
+.pain i{display:block; font-style:normal; font-size:11px; letter-spacing:.12em; color:var(--ink-3); margin-bottom:12px}
+.pain h5{margin:0 0 9px; font-size:16.5px; font-weight:600; letter-spacing:-.01em; line-height:1.45}
+.pain p{margin:0 0 14px; font-size:13.5px; line-height:1.72; color:var(--ink-2)}
+.pain em{display:block; font-style:normal; font-size:12.5px; color:var(--blue); line-height:1.5}
+@media (max-width:980px){ .pain-grid{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:620px){ .pain-grid{grid-template-columns:1fr} }
+
+/* ---------------- 首屏任务可点 ---------------- */
+.win .task{cursor:pointer; border-radius:8px; transition:background .18s var(--ease)}
+.win .task:hover{background:rgba(0,0,0,.028)}
