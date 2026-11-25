@@ -227,6 +227,7 @@
      ============================================================ */
   var xc = { mod: '全部', i: 0, picked: -1, graded: false, tab: 'practice', attrib: null, tag: null };
   var noteOpen = false;
+  var bankOpen = false, bankMsg = '';
 
   function xcList() {
     var pool = D.questions.filter(function (q) { return q.opts && q.opts.length >= 2 && q.ans >= 0; });
@@ -252,16 +253,144 @@
       '</div>';
   }
 
+  /* ---------- 本地真题导入 ---------- */
+  function bankItems() {
+    return (window.KG_BANK && window.KG_BANK.read) ? window.KG_BANK.read() : [];
+  }
+
+  function hash36(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h.toString(36);
+  }
+
+  function ansIndex(v) {
+    var t = String(v == null ? '' : v).trim().toUpperCase();
+    if (t === 'A') return 0; if (t === 'B') return 1; if (t === 'C') return 2; if (t === 'D') return 3;
+    var n = parseInt(t, 10);
+    if (isNaN(n)) return -1;
+    if (n >= 1 && n <= 4) return n - 1;
+    if (n === 0) return 0;
+    return -1;
+  }
+
+  function mkQ(o, idx, defSrc) {
+    var opts = (o.opts || []).map(function (x) { return String(x == null ? '' : x).trim(); });
+    while (opts.length < 4) opts.push('');
+    opts = opts.slice(0, 4);
+    var ans = ansIndex(o.ans);
+    var stem = String(o.stem == null ? '' : o.stem).trim();
+    if (stem.length < 4 || opts.filter(Boolean).length !== 4 || ans < 0) return null;
+    var mod = String(o.mod || '').trim() || '常识判断';
+    return {
+      id: o.id || ('ub' + hash36(stem + '|' + opts.join('|'))),
+      mod: mod,
+      tag: String(o.tag || '').trim() || (mod === '常识判断' ? '政治' : ''),
+      level: o.level === 3 || o.level === 1 || o.level === 2 ? o.level : 2,
+      stem: stem,
+      opts: opts,
+      ans: ans,
+      exp: String(o.exp || o.explain || '').trim() || '（暂无解析）',
+      src: String(o.src || o.source || '').trim() || String(defSrc || '').trim(),
+      imp: 1
+    };
+  }
+
+  function parseCsv(text, defSrc) {
+    var out = [];
+    text.split(/\r?\n/).forEach(function (line) {
+      if (!line.trim()) return;
+      var f = line.indexOf('\t') >= 0 ? line.split('\t') : line.split(/[,，]/);
+      f = f.map(function (x) { return x.trim(); });
+      if (f.length < 6) return;
+      if (/^(题干|题目|stem)/.test(f[0])) return;
+      var q = mkQ({
+        stem: f[0], opts: [f[1], f[2], f[3], f[4]],
+        ans: f[5], exp: f[6] || '', src: f[7] || '', mod: f[8] || '', tag: f[9] || ''
+      }, out.length, defSrc);
+      if (q) out.push(q);
+    });
+    return out;
+  }
+
+  function parseBlocks(text, defSrc) {
+    var out = [];
+    text.split(/\n\s*\n/).forEach(function (block) {
+      var lines = block.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+      if (lines.length < 3) return;
+      var stem = '', opts = [], ans = '', exp = '', src = '', mod = '';
+      lines.forEach(function (ln) {
+        var m = ln.match(/^[A-Da-d][\.、:：\)]\s*(.+)$/);
+        if (m) { opts.push(m[1].trim()); return; }
+        var a = ln.match(/^(?:答案|正确答案)[:：\s]*([A-Da-d1-4])/);
+        if (a) { ans = a[1]; return; }
+        var e = ln.match(/^(?:解析|分析)[:：\s]*(.+)$/);
+        if (e) { exp = e[1].trim(); return; }
+        var s2 = ln.match(/^(?:出处|来源|题源)[:：\s]*(.+)$/);
+        if (s2) { src = s2[1].trim(); return; }
+        var mm = ln.match(/^(?:模块|科目)[:：\s]*(.+)$/);
+        if (mm) { mod = mm[1].trim(); return; }
+        if (!stem && !/^\d+[\.、]/.test(ln)) stem = ln.replace(/^\d+[\.、]\s*/, '');
+      });
+      if (!stem) return;
+      var q = mkQ({ stem: stem, opts: opts, ans: ans, exp: exp, src: src, mod: mod }, out.length, defSrc);
+      if (q) out.push(q);
+    });
+    return out;
+  }
+
+  function parseBank(text, defSrc) {
+    text = String(text || '').trim();
+    if (!text) return { items: [], err: '还没粘内容' };
+    if (text.charAt(0) === '[' || text.charAt(0) === '{') {
+      var data = null;
+      try { data = JSON.parse(text); } catch (e) { return { items: [], err: 'JSON 格式有误：' + e.message.slice(0, 60) }; }
+      var arr = Array.isArray(data) ? data : (data.questions || []);
+      if (!Array.isArray(arr)) return { items: [], err: 'JSON 里没找到题目数组' };
+      var items = [];
+      arr.forEach(function (o) { var q = mkQ(o, items.length, defSrc); if (q) items.push(q); });
+      return { items: items, err: items.length ? '' : '题目字段不全（需要 stem / opts 四条 / ans）' };
+    }
+    var csv = parseCsv(text, defSrc);
+    if (csv.length) return { items: csv, err: '' };
+    var blk = parseBlocks(text, defSrc);
+    return { items: blk, err: blk.length ? '' : '没认出来，检查一下格式（题干 + A–D 四个选项 + 答案）' };
+  }
+
+  function bankBoxHTML() {
+    var n = bankItems().length;
+    return '<div class="bank-box">' +
+      '<div class="bank-h"><b>导入真题</b>' +
+      '<span class="small muted">存在本机，不上传；导入后整页刷新生效</span>' +
+      '<div class="spacer"></div>' +
+      '<button class="btn ghost sm" data-act="bankClose">收起</button></div>' +
+      '<p class="bank-tip">支持 <b>JSON</b>（stem / opts / ans / exp / src / mod）、<b>CSV</b>（题干,选项A,选项B,选项C,选项D,答案,解析,出处,模块）、<b>纯文本</b>（题干 + A–D 四行 + 「答案：B」+「出处：…」）。没写出处的题会用下面的公共出处。</p>' +
+      '<input class="bank-src" id="bankSrc" placeholder="公共出处，例如：2024 国考副省级 第 1–20 题">' +
+      '<textarea class="bank-text" id="bankText" placeholder="把真题粘到这里，一次可以几百道"></textarea>' +
+      (bankMsg ? '<div class="bank-msg">' + esc(bankMsg) + '</div>' : '') +
+      '<div class="bank-f"><span class="small muted">已导入 ' + n + ' 道</span>' +
+      '<div class="spacer"></div>' +
+      (n ? '<button class="btn ghost sm" data-act="bankReset">清空导入</button>' : '') +
+      '<button class="btn sm" data-act="bankParse">解析并导入</button></div>' +
+      '</div>';
+  }
+
   function renderXingce() {
     var html = '<div class="tool-line">' +
       '<h2>行测刷题</h2>' +
       '<span class="sub">共 ' + QCOUNT + ' 道 · 已做 ' + Object.keys(S.answers).length + ' 道</span>' +
       '<div class="spacer"></div>' +
+      '<button class="btn ghost sm" data-act="bankOpen">导入真题</button>' +
       '<div class="seg">' +
         '<button class="' + (xc.tab === 'practice' ? 'on' : '') + '" data-act="xctab" data-t="practice">练习</button>' +
         '<button class="' + (xc.tab === 'wrong' ? 'on' : '') + '" data-act="xctab" data-t="wrong">错题本 ' + Object.keys(S.wrong).length + '</button>' +
       '</div>' +
     '</div>';
+
+    if (bankOpen) html += bankBoxHTML();
 
     var mods = ['全部'].concat(D.modules).map(function (m) {
       return '<button class="mod-chip' + (m === xc.mod ? ' on' : '') + '" data-act="xcmod" data-m="' + esc(m) + '">' + esc(m) + '</button>';
@@ -290,6 +419,7 @@
       '<div class="qhead">' +
         '<span class="tag blue">' + esc(q.mod) + '</span>' +
         '<span class="tag">' + esc(q.tag) + '</span>' +
+        (q.src ? '<span class="tag src" title="出处">' + esc(q.src) + '</span>' : '') +
         '<span class="tag ' + (q.level === 3 ? 'red' : q.level === 2 ? 'amber' : 'green') + '">' +
           (q.level === 3 ? '难度较高' : q.level === 2 ? '中等' : '基础') + '</span>' +
         '<div class="spacer"></div>' +
@@ -1440,6 +1570,44 @@
       case 'resetq':
         resetQuestion();
         break;
+      case 'bankOpen':
+        bankOpen = true; bankMsg = '';
+        renderXingce();
+        break;
+      case 'bankClose':
+        bankOpen = false; bankMsg = '';
+        renderXingce();
+        break;
+      case 'bankParse': {
+        var bsrc = (document.getElementById('bankSrc') || {}).value || '';
+        var btxt = (document.getElementById('bankText') || {}).value || '';
+        var res = parseBank(btxt, bsrc);
+        if (!res.items.length) { bankMsg = res.err || '没解析到题目'; renderXingce(); break; }
+        var arr = bankItems();
+        var seen = {};
+        D.questions.forEach(function (q) { seen[q.id] = 1; });
+        arr.forEach(function (q) { seen[q.id] = 1; });
+        var added = 0, dup = 0;
+        res.items.forEach(function (q) {
+          if (seen[q.id]) { dup++; return; }
+          seen[q.id] = 1; arr.push(q); added++;
+        });
+        try { localStorage.setItem('kg-bank-v1', JSON.stringify(arr)); } catch (e) {
+          bankMsg = '存不下了（本地空间不足），先删掉一些再试'; renderXingce(); break;
+        }
+        bankMsg = '解析 ' + res.items.length + ' 道，新增 ' + added + ' 道' + (dup ? '，跳过重复 ' + dup + ' 道' : '') + '。正在刷新…';
+        renderXingce();
+        setTimeout(function () { location.reload(); }, 900);
+        break;
+      }
+      case 'bankReset': {
+        if (!confirm('清空所有本地导入的题目？')) break;
+        localStorage.removeItem('kg-bank-v1');
+        bankMsg = '已清空，正在刷新…';
+        renderXingce();
+        setTimeout(function () { location.reload(); }, 700);
+        break;
+      }
       case 'noteToggle':
         noteOpen = !noteOpen;
         renderXingce();
