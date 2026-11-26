@@ -12,3 +12,4 @@ window.ZHENTI = [{"mod":"言语理解","tag":"逻辑填空","stem":"现代体育
     seen[q.id] = 1;
   });
 })();
+try { window.dispatchEvent(new Event('kg-bank')); } catch (e) {}
