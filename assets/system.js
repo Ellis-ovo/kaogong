@@ -1515,6 +1515,23 @@
      ============================================================ */
   window.KG = { esc: esc, save: save, S: S, mount: mount, toast: toast, go: go };
 
+  /* 真题包 5MB，别挡住首屏：界面先出来，再把它取回来 */
+  (function () {
+    if (window.ZHENTI || window.__ztLoading) return;
+    window.__ztLoading = 1;
+    var sc = document.createElement('script');
+    sc.src = 'assets/data-zhenti.js';
+    sc.async = true;
+    document.body.appendChild(sc);
+  })();
+
+  window.addEventListener('kg-bank', function () {
+    MATS = {};
+    D.questions.forEach(function (q) { if (q.material) MATS[q.id] = q.stem.replace(/^【材料】/, ''); });
+    QCOUNT = D.questions.filter(function (q) { return q.opts && q.opts.length >= 2; }).length;
+    if (CURRENT === 'xingce' || CURRENT === 'mock' || CURRENT === 'today' || CURRENT === 'stats') go(CURRENT);
+  });
+
   document.getElementById('view').addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');
     if (!t) return;
