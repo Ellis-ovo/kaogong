@@ -6,7 +6,7 @@
   'use strict';
 
   var D = window.APP_DATA || { questions: [], news: [], essays: [], interview: [], tasks: [], modules: [] };
-  var KEY = 'kg-app-v1';
+  var KEY = window.KG_KEY || 'kg-app-v1';
   var EXAM_DATE = '2027-04-28';
 
   /* ---------------- 1. 状态 ---------------- */
